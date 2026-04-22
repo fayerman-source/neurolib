@@ -1,5 +1,5 @@
 {
-  "name": "neurolib",
+  "name": "neuro-notes",
   "version": "0.1.0",
   "private": true,
   "description": "Neurology dot phrases and NIHSS calculator — a static clinical documentation aid.",
@@ -16,7 +16,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "eslint"
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "16.1.6",
