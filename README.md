@@ -4,7 +4,7 @@ A clinical documentation aid for neurology. Copy-paste dot phrase templates and 
 
 > ⚠ **Clinical documentation aid only — not a medical device.** Read `DISCLAIMER.md` before use. Verify every score and generated text against the patient before entering into the medical record. Do not enter PHI into this application.
 
-**Live demo:** _(TODO: add Vercel / GitHub Pages URL once deployed)_
+**Live demo:** https://fayerman-source.github.io/neuro-notes/
 
 ## Features
 
@@ -40,10 +40,9 @@ We especially welcome:
 
 See `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md` before contributing.
 
-## Authors
+## Author
 
-- **Eli Fayerman** — Developer
-- **Clinical Co-Author** — _(TODO: fill in neurologist name / pseudonym before flipping to public)_
+- **Eli Fayerman**
 
 ## License
 
