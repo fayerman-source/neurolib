@@ -1,4 +1,4 @@
-# Contributing to Neuro Note Macros
+# Contributing to neurolib
 
 Thanks for considering a contribution. This project is a clinical documentation aid used by working clinicians, so the bar for changes — especially to clinical content — is higher than a typical web project.
 

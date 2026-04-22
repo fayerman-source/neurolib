@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const isGithubPages = process.env.GITHUB_PAGES === "true";
-const repo = "neuro-notes";
+const repo = "neurolib";
 
 const nextConfig: NextConfig = {
   output: "export",

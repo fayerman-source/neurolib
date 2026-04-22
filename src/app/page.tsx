@@ -25,135 +25,87 @@ export default function Home() {
   }, [activeCategory, searchQuery]);
 
   return (
-    <div>
+    <div className="min-h-screen">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#4F6EF7] focus:text-white focus:rounded-lg focus:font-medium"
       >
         Skip to main content
       </a>
-      <header 
-        className="sticky top-0 z-50"
-        style={{
-          backdropFilter: 'blur(12px)',
-          background: 'rgba(10, 15, 30, 0.85)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-        }}
-      >
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, #4F6EF7, #7B5EA7)',
-                  boxShadow: '0 4px 12px rgba(79, 110, 247, 0.4)',
-                }}
-              >
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold" style={{ color: '#F8FAFC' }}>Neuro Note Macros</h1>
-                <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.45)' }}>Neurology dot phrases & templates</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowNIHSS(!showNIHSS)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
+
+      {/* Top Section - Navigation and Identity */}
+      <div className="max-w-6xl mx-auto px-4 pt-8 pb-12">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{
-                border: showNIHSS ? 'none' : '1px solid #4F6EF7',
-                color: showNIHSS ? 'white' : '#7C9FFF',
-                background: showNIHSS 
-                  ? 'linear-gradient(135deg, #4F6EF7, #7B5EA7)' 
-                  : 'rgba(79, 110, 247, 0.08)',
-                boxShadow: showNIHSS 
-                  ? '0 4px 12px rgba(79, 110, 247, 0.4)' 
-                  : 'none',
+                background: 'linear-gradient(135deg, #4F6EF7, #7B5EA7)',
+                boxShadow: '0 4px 12px rgba(79, 110, 247, 0.4)',
               }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
-              NIHSS Calculator
-            </button>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <SearchBar onSearch={setSearchQuery} />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-[#F8FAFC]">neurolib</h1>
+              <p className="text-xs text-white/45">High-performance neurology templates</p>
             </div>
           </div>
+          <button
+            onClick={() => {
+              setShowNIHSS(!showNIHSS);
+              if (!showNIHSS) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{
+              border: showNIHSS ? 'none' : '1px solid rgba(79, 110, 247, 0.4)',
+              color: showNIHSS ? 'white' : '#7C9FFF',
+              background: showNIHSS 
+                ? 'linear-gradient(135deg, #4F6EF7, #7B5EA7)' 
+                : 'rgba(79, 110, 247, 0.08)',
+              boxShadow: showNIHSS 
+                ? '0 4px 12px rgba(79, 110, 247, 0.4)' 
+                : 'none',
+            }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            NIHSS Calculator
+          </button>
+        </div>
+      </div>
 
-          <div className="mt-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+      {/* Primary Action Area - Search and Categories */}
+      <div 
+        className="sticky top-0 z-50 border-y border-white/5"
+        style={{
+          backdropFilter: 'blur(16px)',
+          background: 'rgba(11, 15, 26, 0.7)',
+        }}
+      >
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="max-w-3xl mx-auto space-y-6">
+            <SearchBar onSearch={setSearchQuery} />
             <CategoryNav activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
           </div>
         </div>
-      </header>
+      </div>
 
-      <section className="relative overflow-hidden border-b border-white/5">
-        <div 
-          className="absolute inset-0 z-0 opacity-40 grayscale-[0.2]"
-          style={{
-            backgroundImage: 'url("/hero-bg.png")',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        />
-        <div className="absolute inset-0 z-10 bg-gradient-to-b from-[#0B0F1A]/80 via-[#0B0F1A]/40 to-[#0B0F1A]" />
-        
-        <div className="relative z-20 max-w-6xl mx-auto px-4 py-20 md:py-32">
-          <div className="max-w-2xl">
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ color: '#F8FAFC' }}>
-              Neurology documentation, <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4F6EF7] to-[#7B5EA7]">
-                reimagined for clinical flow.
-              </span>
-            </h2>
-            <p className="text-lg mb-8 leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-              A high-performance library of dot phrases and clinical calculators. 
-              Designed for neurologists and stroke teams who value precision and speed. 
-              Private, local-first, and always open source.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <button 
-                onClick={() => {
-                  const el = document.getElementById('main-content');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="px-6 py-3 rounded-xl font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  background: 'linear-gradient(135deg, #4F6EF7, #7B5EA7)',
-                  color: 'white',
-                  boxShadow: '0 4px 20px rgba(79, 110, 247, 0.3)',
-                }}
-              >
-                Browse Templates
-              </button>
-              <button 
-                onClick={() => setShowNIHSS(true)}
-                className="px-6 py-3 rounded-xl font-semibold transition-all border border-white/10 hover:bg-white/5"
-                style={{ color: '#F8FAFC' }}
-              >
-                Launch NIHSS
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <main id="main-content" className="max-w-6xl mx-auto px-4 py-6">
+      <main id="main-content" className="max-w-6xl mx-auto px-4 py-8">
         {showNIHSS && (
-          <div className="mb-8 animate-slide-down">
+          <div className="mb-12 animate-slide-down">
             <NIHSSCalculator />
           </div>
         )}
 
-        <div className="mb-4 flex items-center justify-end">
+        <div className="mb-6 flex items-center justify-end">
           <p 
-            className="text-xs uppercase tracking-wider" 
-            style={{ color: 'rgba(255, 255, 255, 0.3)' }}
+            className="text-[10px] uppercase tracking-widest font-semibold text-white/20" 
             aria-live="polite"
           >
             {filteredPhrases.length} template{filteredPhrases.length !== 1 ? 's' : ''} found
@@ -161,23 +113,20 @@ export default function Home() {
         </div>
 
         {filteredPhrases.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
             {filteredPhrases.map((phrase) => (
               <PhraseCard key={phrase.id} phrase={phrase} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div 
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: 'rgba(255, 255, 255, 0.05)' }}
-            >
-              <svg className="w-8 h-8" style={{ color: 'rgba(255, 255, 255, 0.25)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-center py-20 bg-white/[0.02] border border-dashed border-white/5 rounded-3xl">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-white/5">
+              <svg className="w-8 h-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium mb-1" style={{ color: '#F8FAFC' }}>No templates found</h3>
-            <p style={{ color: 'rgba(255, 255, 255, 0.45)' }}>Try adjusting your search or category filter</p>
+            <h3 className="text-lg font-medium mb-1 text-white/90">No templates found</h3>
+            <p className="text-sm text-white/45">Try adjusting your search or category filter</p>
           </div>
         )}
       </main>

@@ -1,6 +1,6 @@
 # Medical Disclaimer
 
-**Neuro Note Macros is a clinical documentation aid. It is not a medical device.**
+**neurolib is a clinical documentation aid. It is not a medical device.**
 
 ## Not a medical device
 
