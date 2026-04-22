@@ -39,3 +39,6 @@ next-env.d.ts
 # OS
 .DS_Store
 Thumbs.db
+
+# Local scratch / AI-generated artifacts (not part of the app)
+nanobanana-output/

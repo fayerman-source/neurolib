@@ -6,6 +6,7 @@ export interface DotPhrase {
   description: string;
   content: string;
   tags: string[];
+  source?: string;
 }
 
 export const categories = [

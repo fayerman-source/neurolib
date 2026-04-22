@@ -25,7 +25,7 @@ export default function Home() {
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="min-h-screen">
+    <div>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#4F6EF7] focus:text-white focus:rounded-lg focus:font-medium"
@@ -131,21 +131,6 @@ export default function Home() {
         )}
       </main>
 
-      <footer 
-        className="mt-12"
-        style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}
-      >
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.25)' }}>
-              Neuro Note Macros — Neurology documentation templates
-            </p>
-            <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.2)' }}>
-              For informational purposes only. Always verify clinical content.
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
