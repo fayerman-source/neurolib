@@ -9,14 +9,14 @@
     "type": "git",
     "url": "https://github.com/fayerman-source/neurolib.git"
   },
-  "homepage": "https://github.com/fayerman-source/neurolib#readme",
+  "homepage": "https://fayerman-source.github.io/neurolib/",
   "bugs": {
     "url": "https://github.com/fayerman-source/neurolib/issues"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "next": "16.1.6",
