@@ -1,17 +1,56 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useSyncExternalStore } from 'react';
 import SearchBar from '@/components/SearchBar';
 import CategoryNav from '@/components/CategoryNav';
 import PhraseCard from '@/components/PhraseCard';
 import NIHSSCalculator from '@/components/NIHSSCalculator';
+import EhrDialectSelector from '@/components/EhrDialectSelector';
 import { dotPhrases, CategoryId } from '@/data/dotPhrases';
 import { filterDotPhrases } from '@/lib/filterPhrases';
+import { EhrDialect } from '@/lib/templateCompiler';
+
+const DIALECT_STORAGE_KEY = 'neurolib:ehr-dialect';
+
+function subscribeDialect(callback: () => void): () => void {
+  window.addEventListener('neurolib-dialect-change', callback);
+  window.addEventListener('storage', callback);
+  return () => {
+    window.removeEventListener('neurolib-dialect-change', callback);
+    window.removeEventListener('storage', callback);
+  };
+}
+
+function getClientDialect(): EhrDialect {
+  try {
+    const stored = window.localStorage.getItem(DIALECT_STORAGE_KEY);
+    if (stored === 'epic' || stored === 'cerner' || stored === 'raw') {
+      return stored;
+    }
+  } catch {
+    // Ignore storage access errors in restricted browser modes
+  }
+  return 'epic';
+}
+
+function getServerDialect(): EhrDialect {
+  return 'epic';
+}
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showNIHSS, setShowNIHSS] = useState(false);
+  const ehrDialect = useSyncExternalStore(subscribeDialect, getClientDialect, getServerDialect);
+
+  const handleDialectChange = (nextDialect: EhrDialect) => {
+    try {
+      window.localStorage.setItem(DIALECT_STORAGE_KEY, nextDialect);
+      window.dispatchEvent(new Event('neurolib-dialect-change'));
+    } catch {
+      // Ignore storage write errors
+    }
+  };
 
   const filteredPhrases = useMemo(() => {
     return filterDotPhrases(dotPhrases, activeCategory, searchQuery);
@@ -82,9 +121,10 @@ export default function Home() {
         }}
       >
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="max-w-3xl mx-auto space-y-4">
             <SearchBar onSearch={setSearchQuery} />
             <CategoryNav activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
+            <EhrDialectSelector dialect={ehrDialect} onChange={handleDialectChange} />
           </div>
         </div>
       </div>
@@ -108,7 +148,7 @@ export default function Home() {
         {filteredPhrases.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
             {filteredPhrases.map((phrase) => (
-              <PhraseCard key={phrase.id} phrase={phrase} />
+              <PhraseCard key={phrase.id} phrase={phrase} dialect={ehrDialect} />
             ))}
           </div>
         ) : (
