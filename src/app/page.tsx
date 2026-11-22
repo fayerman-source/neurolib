@@ -6,19 +6,40 @@ import CategoryNav from '@/components/CategoryNav';
 import PhraseCard from '@/components/PhraseCard';
 import NIHSSCalculator from '@/components/NIHSSCalculator';
 import EhrDialectSelector from '@/components/EhrDialectSelector';
-import { dotPhrases, CategoryId } from '@/data/dotPhrases';
-import { filterDotPhrases } from '@/lib/filterPhrases';
-import { EhrDialect } from '@/lib/templateCompiler';
+import CustomPackPanel from '@/components/CustomPackPanel';
+import { dotPhrases, CategoryId, DotPhrase } from '@/data/dotPhrases';
+import { copyTextToClipboard } from '@/lib/clipboard';
+import { compileTemplate, EhrDialect } from '@/lib/templateCompiler';
+import {
+  CUSTOM_PACK_STORAGE_KEY,
+  mergeAndRankPhrases,
+  parsePinnedIds,
+  PINNED_STORAGE_KEY,
+  togglePinnedId,
+  validateCustomPackJson,
+} from '@/lib/packStorage';
 
 const DIALECT_STORAGE_KEY = 'neurolib:ehr-dialect';
+const EMPTY_IDS: readonly string[] = [];
+const EMPTY_PHRASES: readonly DotPhrase[] = [];
 
-function subscribeDialect(callback: () => void): () => void {
-  window.addEventListener('neurolib-dialect-change', callback);
+let cachedPinnedRaw: string | null = null;
+let cachedPinnedParsed: readonly string[] = EMPTY_IDS;
+
+let cachedCustomRaw: string | null = null;
+let cachedCustomParsed: readonly DotPhrase[] = EMPTY_PHRASES;
+
+function subscribeStore(callback: () => void): () => void {
+  window.addEventListener('neurolib-store-change', callback);
   window.addEventListener('storage', callback);
   return () => {
-    window.removeEventListener('neurolib-dialect-change', callback);
+    window.removeEventListener('neurolib-store-change', callback);
     window.removeEventListener('storage', callback);
   };
+}
+
+function notifyStoreChange() {
+  window.dispatchEvent(new Event('neurolib-store-change'));
 }
 
 function getClientDialect(): EhrDialect {
@@ -28,7 +49,7 @@ function getClientDialect(): EhrDialect {
       return stored;
     }
   } catch {
-    // Ignore storage access errors in restricted browser modes
+    // Ignore storage errors
   }
   return 'epic';
 }
@@ -37,24 +58,115 @@ function getServerDialect(): EhrDialect {
   return 'epic';
 }
 
+function getClientPinnedIds(): readonly string[] {
+  try {
+    const raw = window.localStorage.getItem(PINNED_STORAGE_KEY);
+    if (raw !== cachedPinnedRaw) {
+      cachedPinnedRaw = raw;
+      cachedPinnedParsed = parsePinnedIds(raw);
+    }
+    return cachedPinnedParsed;
+  } catch {
+    return EMPTY_IDS;
+  }
+}
+
+function getServerPinnedIds(): readonly string[] {
+  return EMPTY_IDS;
+}
+
+function getClientCustomPhrases(): readonly DotPhrase[] {
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_PACK_STORAGE_KEY);
+    if (raw !== cachedCustomRaw) {
+      cachedCustomRaw = raw;
+      if (!raw) {
+        cachedCustomParsed = EMPTY_PHRASES;
+      } else {
+        const res = validateCustomPackJson(raw);
+        cachedCustomParsed = res.ok ? res.phrases : EMPTY_PHRASES;
+      }
+    }
+    return cachedCustomParsed;
+  } catch {
+    return EMPTY_PHRASES;
+  }
+}
+
+function getServerCustomPhrases(): readonly DotPhrase[] {
+  return EMPTY_PHRASES;
+}
+
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showNIHSS, setShowNIHSS] = useState(false);
-  const ehrDialect = useSyncExternalStore(subscribeDialect, getClientDialect, getServerDialect);
+  const [showCustomPack, setShowCustomPack] = useState(false);
+  const [quickCopiedTrigger, setQuickCopiedTrigger] = useState<string | null>(null);
+
+  const ehrDialect = useSyncExternalStore(subscribeStore, getClientDialect, getServerDialect);
+  const pinnedIds = useSyncExternalStore(subscribeStore, getClientPinnedIds, getServerPinnedIds);
+  const customPhrases = useSyncExternalStore(
+    subscribeStore,
+    getClientCustomPhrases,
+    getServerCustomPhrases
+  );
+
+  const customIdSet = useMemo(() => new Set(customPhrases.map((p) => p.id)), [customPhrases]);
+  const pinnedIdSet = useMemo(() => new Set(pinnedIds), [pinnedIds]);
+
+  const filteredPhrases = useMemo(() => {
+    return mergeAndRankPhrases(
+      dotPhrases,
+      customPhrases,
+      activeCategory,
+      searchQuery,
+      pinnedIds
+    );
+  }, [customPhrases, activeCategory, searchQuery, pinnedIds]);
 
   const handleDialectChange = (nextDialect: EhrDialect) => {
     try {
       window.localStorage.setItem(DIALECT_STORAGE_KEY, nextDialect);
-      window.dispatchEvent(new Event('neurolib-dialect-change'));
+      notifyStoreChange();
     } catch {
-      // Ignore storage write errors
+      // Ignore storage errors
     }
   };
 
-  const filteredPhrases = useMemo(() => {
-    return filterDotPhrases(dotPhrases, activeCategory, searchQuery);
-  }, [activeCategory, searchQuery]);
+  const handleTogglePin = (phraseId: string) => {
+    try {
+      const next = togglePinnedId(pinnedIds, phraseId);
+      window.localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(next));
+      notifyStoreChange();
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
+  const handleSaveCustomPhrases = (next: DotPhrase[]) => {
+    try {
+      window.localStorage.setItem(CUSTOM_PACK_STORAGE_KEY, JSON.stringify(next));
+      notifyStoreChange();
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
+  const handleDeleteCustomPhrase = (phraseId: string) => {
+    handleSaveCustomPhrases(customPhrases.filter((p) => p.id !== phraseId));
+  };
+
+  const handleQuickCopyTopMatch = async () => {
+    const top = filteredPhrases[0];
+    if (!top) return;
+    const compiled = compileTemplate(top.content, {}, ehrDialect);
+    const ok = await copyTextToClipboard(compiled.text);
+    if (ok) {
+      setQuickCopiedTrigger(top.trigger);
+      setTimeout(() => setQuickCopiedTrigger(null), 1800);
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -67,9 +179,9 @@ export default function Home() {
 
       {/* Top Section - Navigation and Identity */}
       <div className="max-w-6xl mx-auto px-4 pt-8 pb-12">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div 
+            <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{
                 background: 'linear-gradient(135deg, #4F6EF7, #7B5EA7)',
@@ -85,35 +197,53 @@ export default function Home() {
               <p className="text-xs text-white/45">High-performance neurology templates</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setShowNIHSS(!showNIHSS);
-              if (!showNIHSS) {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }
-            }}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
-            style={{
-              border: showNIHSS ? 'none' : '1px solid rgba(79, 110, 247, 0.4)',
-              color: showNIHSS ? 'white' : '#7C9FFF',
-              background: showNIHSS 
-                ? 'linear-gradient(135deg, #4F6EF7, #7B5EA7)' 
-                : 'rgba(79, 110, 247, 0.08)',
-              boxShadow: showNIHSS 
-                ? '0 4px 12px rgba(79, 110, 247, 0.4)' 
-                : 'none',
-            }}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            NIHSS Calculator
-          </button>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setShowCustomPack(!showCustomPack)}
+              aria-expanded={showCustomPack}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all"
+              style={{
+                border: showCustomPack ? 'none' : '1px solid rgba(255, 255, 255, 0.14)',
+                color: showCustomPack ? 'white' : 'rgba(255, 255, 255, 0.75)',
+                background: showCustomPack
+                  ? 'linear-gradient(135deg, #4F6EF7, #7B5EA7)'
+                  : 'rgba(255, 255, 255, 0.05)',
+              }}
+            >
+              Custom Pack{customPhrases.length > 0 ? ` (${customPhrases.length})` : ''}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowNIHSS(!showNIHSS);
+                if (!showNIHSS) {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                border: showNIHSS ? 'none' : '1px solid rgba(79, 110, 247, 0.4)',
+                color: showNIHSS ? 'white' : '#7C9FFF',
+                background: showNIHSS
+                  ? 'linear-gradient(135deg, #4F6EF7, #7B5EA7)'
+                  : 'rgba(79, 110, 247, 0.08)',
+                boxShadow: showNIHSS ? '0 4px 12px rgba(79, 110, 247, 0.4)' : 'none',
+              }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              NIHSS Calculator
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Primary Action Area - Search and Categories */}
-      <div 
+      {/* Primary Action Area - Search, Categories, and Dialect */}
+      <div
         className="sticky top-0 z-50 border-y border-white/5"
         style={{
           backdropFilter: 'blur(16px)',
@@ -122,7 +252,12 @@ export default function Home() {
       >
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="max-w-3xl mx-auto space-y-4">
-            <SearchBar onSearch={setSearchQuery} />
+            <SearchBar
+              onSearch={setSearchQuery}
+              topMatchTrigger={filteredPhrases[0]?.trigger}
+              onQuickCopyTopMatch={handleQuickCopyTopMatch}
+              quickCopiedTrigger={quickCopiedTrigger}
+            />
             <CategoryNav activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
             <EhrDialectSelector dialect={ehrDialect} onChange={handleDialectChange} />
           </div>
@@ -130,6 +265,15 @@ export default function Home() {
       </div>
 
       <main id="main-content" className="max-w-6xl mx-auto px-4 py-8">
+        {showCustomPack && (
+          <div className="mb-10 animate-slide-down">
+            <CustomPackPanel
+              customPhrases={customPhrases}
+              onSaveCustomPhrases={handleSaveCustomPhrases}
+            />
+          </div>
+        )}
+
         {showNIHSS && (
           <div className="mb-12 animate-slide-down">
             <NIHSSCalculator />
@@ -137,8 +281,8 @@ export default function Home() {
         )}
 
         <div className="mb-6 flex items-center justify-end">
-          <p 
-            className="text-[10px] uppercase tracking-widest font-semibold text-white/20" 
+          <p
+            className="text-[10px] uppercase tracking-widest font-semibold text-white/20"
             aria-live="polite"
           >
             {filteredPhrases.length} template{filteredPhrases.length !== 1 ? 's' : ''} found
@@ -148,7 +292,15 @@ export default function Home() {
         {filteredPhrases.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
             {filteredPhrases.map((phrase) => (
-              <PhraseCard key={phrase.id} phrase={phrase} dialect={ehrDialect} />
+              <PhraseCard
+                key={phrase.id}
+                phrase={phrase}
+                dialect={ehrDialect}
+                isPinned={pinnedIdSet.has(phrase.id)}
+                onTogglePin={handleTogglePin}
+                isCustom={customIdSet.has(phrase.id)}
+                onDeleteCustom={handleDeleteCustomPhrase}
+              />
             ))}
           </div>
         ) : (
@@ -163,7 +315,6 @@ export default function Home() {
           </div>
         )}
       </main>
-
     </div>
   );
 }
