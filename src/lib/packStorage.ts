@@ -3,7 +3,8 @@ import { filterDotPhrases } from '@/lib/filterPhrases';
 
 export const PINNED_STORAGE_KEY = 'neurolib:pinned-ids';
 export const CUSTOM_PACK_STORAGE_KEY = 'neurolib:custom-phrases';
-const MAX_PACK_BYTES = 512 * 1024;
+export const MAX_PACK_BYTES = 512 * 1024;
+const MAX_RAW_PARSE_BYTES = MAX_PACK_BYTES * 4;
 
 const VALID_CATEGORIES = new Set<string>(
   categories.map((c) => c.id).filter((id) => id !== 'all')
@@ -17,6 +18,10 @@ export interface CustomPhrasePack {
 
 export type PackValidationResult =
   | { ok: true; phrases: DotPhrase[] }
+  | { ok: false; error: string };
+
+export type StorageSaveResult =
+  | { ok: true }
   | { ok: false; error: string };
 
 export function parsePinnedIds(raw: string | null): string[] {
@@ -46,8 +51,8 @@ export function togglePinnedId(current: readonly string[], phraseId: string): st
 }
 
 export function validateCustomPackJson(rawJson: string): PackValidationResult {
-  if (rawJson.length > MAX_PACK_BYTES) {
-    return { ok: false, error: 'Pack file exceeds 512 KB size limit.' };
+  if (rawJson.length > MAX_RAW_PARSE_BYTES) {
+    return { ok: false, error: 'Pack file exceeds 512 KB normalized size limit.' };
   }
 
   let parsed: unknown;
@@ -135,7 +140,41 @@ export function validateCustomPackJson(rawJson: string): PackValidationResult {
     });
   }
 
+  // Enforce the 512 KB cap on the canonical normalized JSON persisted to localStorage,
+  // guaranteeing that any accepted pack reloads cleanly and round-trips through pretty-printed export.
+  const canonicalJson = JSON.stringify(validated);
+  if (canonicalJson.length > MAX_PACK_BYTES) {
+    return { ok: false, error: 'Pack exceeds 512 KB normalized size limit.' };
+  }
+
   return { ok: true, phrases: validated };
+}
+
+export function saveCustomPhrasesToStorage(
+  phrases: readonly DotPhrase[],
+  storage?: Pick<Storage, 'setItem'>
+): StorageSaveResult {
+  const canonicalJson = JSON.stringify(phrases);
+  if (canonicalJson.length > MAX_PACK_BYTES) {
+    return { ok: false, error: 'Pack exceeds 512 KB normalized size limit.' };
+  }
+
+  const targetStorage =
+    storage ?? (typeof window !== 'undefined' ? window.localStorage : undefined);
+
+  if (!targetStorage) {
+    return { ok: false, error: 'Browser storage is unavailable.' };
+  }
+
+  try {
+    targetStorage.setItem(CUSTOM_PACK_STORAGE_KEY, canonicalJson);
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      error: 'Failed to save to browser storage (storage disabled or quota exceeded).',
+    };
+  }
 }
 
 export function serializeCustomPack(phrases: readonly DotPhrase[]): string {
@@ -199,4 +238,21 @@ export function mergeAndRankPhrases(
     const bPinned = pinnedSet.has(b.id) ? 1 : 0;
     return bPinned - aPinned;
   });
+}
+
+export function resolveQuickCopyPhrase(
+  builtInPhrases: readonly DotPhrase[],
+  customPhrases: readonly DotPhrase[],
+  activeCategory: CategoryId,
+  liveQuery: string,
+  pinnedIds: readonly string[]
+): DotPhrase | undefined {
+  if (liveQuery.trim().length === 0) return undefined;
+  return mergeAndRankPhrases(
+    builtInPhrases,
+    customPhrases,
+    activeCategory,
+    liveQuery,
+    pinnedIds
+  )[0];
 }

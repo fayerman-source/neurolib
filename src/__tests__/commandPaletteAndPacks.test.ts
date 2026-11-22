@@ -1,8 +1,11 @@
 import { describe, test, expect } from "bun:test";
 import { dotPhrases, DotPhrase } from "@/data/dotPhrases";
 import {
+  MAX_PACK_BYTES,
   mergeAndRankPhrases,
   parsePinnedIds,
+  resolveQuickCopyPhrase,
+  saveCustomPhrasesToStorage,
   serializeCustomPack,
   togglePinnedId,
   validateCustomPackJson,
@@ -89,5 +92,72 @@ describe("Command-palette ranking, pinned favorites, and local JSON packs", () =
       ])
     );
     expect(badTrigger.ok).toBe(false);
+  });
+
+  test("resolves quick-copy synchronously from live input query before debounce settles", () => {
+    // Even if previous debounced state had stroke-hpi pinned at top, live '.tpaelig' resolves immediately
+    const resolved = resolveQuickCopyPhrase(dotPhrases, [], "all", ".tpaelig", [
+      "stroke-hpi",
+    ]);
+    expect(resolved?.id).toBe("tpa-eligibility");
+    expect(resolveQuickCopyPhrase(dotPhrases, [], "all", "   ", ["stroke-hpi"])).toBeUndefined();
+  });
+
+  test("propagates storage write failures instead of reporting false success", () => {
+    const sample: DotPhrase = {
+      id: "custom-item",
+      name: "Item",
+      trigger: ".citem",
+      category: "stroke",
+      description: "Desc",
+      content: "Body",
+      tags: ["custom"],
+    };
+
+    const quotaFailure = saveCustomPhrasesToStorage([sample], {
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+    });
+    expect(quotaFailure.ok).toBe(false);
+  });
+
+  test("enforces 512 KB cap on canonical normalized form so accepted packs reload and re-import cleanly", () => {
+    // Entry without 'tags' gains '"tags":["custom"]' during normalization.
+    // A raw input just under 512 KB whose normalized JSON exceeds 512 KB must be rejected up front.
+    const nearLimitPadding = "x".repeat(MAX_PACK_BYTES - 125);
+    const overAfterNormalize = JSON.stringify([
+      {
+        id: "near-limit",
+        name: "Near Limit",
+        trigger: ".nearlimit",
+        category: "stroke",
+        description: "Desc",
+        content: nearLimitPadding,
+      },
+    ]);
+    expect(overAfterNormalize.length).toBeLessThanOrEqual(MAX_PACK_BYTES);
+    expect(validateCustomPackJson(overAfterNormalize).ok).toBe(false);
+
+    // A pack that passes validation stays readable from localStorage and after pretty-printed export
+    const validPadding = "x".repeat(MAX_PACK_BYTES - 200);
+    const validRaw = JSON.stringify([
+      {
+        id: "fits-limit",
+        name: "Fits Limit",
+        trigger: ".fitslimit",
+        category: "stroke",
+        description: "Desc",
+        content: validPadding,
+      },
+    ]);
+    const accepted = validateCustomPackJson(validRaw);
+    expect(accepted.ok).toBe(true);
+    if (accepted.ok) {
+      const storedReload = validateCustomPackJson(JSON.stringify(accepted.phrases));
+      expect(storedReload.ok).toBe(true);
+      const exportedReimport = validateCustomPackJson(serializeCustomPack(accepted.phrases));
+      expect(exportedReimport.ok).toBe(true);
+    }
   });
 });

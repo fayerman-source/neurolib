@@ -5,13 +5,15 @@ import { useState, useEffect, useRef } from 'react';
 interface SearchBarProps {
   onSearch: (query: string) => void;
   topMatchTrigger?: string;
-  onQuickCopyTopMatch?: () => void;
+  resolveTopMatchTrigger?: (liveQuery: string) => string | undefined;
+  onQuickCopyTopMatch?: (liveQuery: string) => void;
   quickCopiedTrigger?: string | null;
 }
 
 export default function SearchBar({
   onSearch,
   topMatchTrigger,
+  resolveTopMatchTrigger,
   onQuickCopyTopMatch,
   quickCopiedTrigger,
 }: SearchBarProps) {
@@ -65,9 +67,17 @@ export default function SearchBar({
       handleClear();
     } else if (e.key === 'Enter' && query.trim().length > 0 && onQuickCopyTopMatch) {
       e.preventDefault();
-      onQuickCopyTopMatch();
+      onSearch(query);
+      onQuickCopyTopMatch(query);
     }
   };
+
+  const liveTopTrigger =
+    query.trim().length > 0
+      ? resolveTopMatchTrigger
+        ? resolveTopMatchTrigger(query)
+        : topMatchTrigger
+      : undefined;
 
   return (
     <div className="relative group">
@@ -111,12 +121,12 @@ export default function SearchBar({
           >
             Copied {quickCopiedTrigger}
           </span>
-        ) : query.trim().length > 0 && topMatchTrigger ? (
+        ) : liveTopTrigger ? (
           <span
             className="hidden sm:inline-block text-[11px] font-mono px-2 py-0.5 rounded"
             style={{ background: 'rgba(79, 110, 247, 0.15)', color: '#7C9FFF' }}
           >
-            ↵ {topMatchTrigger}
+            ↵ {liveTopTrigger}
           </span>
         ) : !query ? (
           <kbd

@@ -15,6 +15,9 @@ import {
   mergeAndRankPhrases,
   parsePinnedIds,
   PINNED_STORAGE_KEY,
+  resolveQuickCopyPhrase,
+  saveCustomPhrasesToStorage,
+  StorageSaveResult,
   togglePinnedId,
   validateCustomPackJson,
 } from '@/lib/packStorage';
@@ -144,21 +147,36 @@ export default function Home() {
     }
   };
 
-  const handleSaveCustomPhrases = (next: DotPhrase[]) => {
-    try {
-      window.localStorage.setItem(CUSTOM_PACK_STORAGE_KEY, JSON.stringify(next));
+  const handleSaveCustomPhrases = (next: DotPhrase[]): StorageSaveResult => {
+    const res = saveCustomPhrasesToStorage(next);
+    if (res.ok) {
       notifyStoreChange();
-    } catch {
-      // Ignore storage errors
     }
+    return res;
   };
 
   const handleDeleteCustomPhrase = (phraseId: string) => {
     handleSaveCustomPhrases(customPhrases.filter((p) => p.id !== phraseId));
   };
 
-  const handleQuickCopyTopMatch = async () => {
-    const top = filteredPhrases[0];
+  const resolveTopMatchTrigger = (liveQuery: string): string | undefined => {
+    return resolveQuickCopyPhrase(
+      dotPhrases,
+      customPhrases,
+      activeCategory,
+      liveQuery,
+      pinnedIds
+    )?.trigger;
+  };
+
+  const handleQuickCopyTopMatch = async (liveQuery: string) => {
+    const top = resolveQuickCopyPhrase(
+      dotPhrases,
+      customPhrases,
+      activeCategory,
+      liveQuery,
+      pinnedIds
+    );
     if (!top) return;
     const compiled = compileTemplate(top.content, {}, ehrDialect);
     const ok = await copyTextToClipboard(compiled.text);
@@ -255,6 +273,7 @@ export default function Home() {
             <SearchBar
               onSearch={setSearchQuery}
               topMatchTrigger={filteredPhrases[0]?.trigger}
+              resolveTopMatchTrigger={resolveTopMatchTrigger}
               onQuickCopyTopMatch={handleQuickCopyTopMatch}
               quickCopiedTrigger={quickCopiedTrigger}
             />

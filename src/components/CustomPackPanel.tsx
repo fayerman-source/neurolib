@@ -2,11 +2,15 @@
 
 import { useState } from 'react';
 import { categories, DotPhrase } from '@/data/dotPhrases';
-import { serializeCustomPack, validateCustomPackJson } from '@/lib/packStorage';
+import {
+  serializeCustomPack,
+  StorageSaveResult,
+  validateCustomPackJson,
+} from '@/lib/packStorage';
 
 interface CustomPackPanelProps {
   customPhrases: readonly DotPhrase[];
-  onSaveCustomPhrases: (next: DotPhrase[]) => void;
+  onSaveCustomPhrases: (next: DotPhrase[]) => StorageSaveResult;
 }
 
 const selectableCategories = categories.filter((c) => c.id !== 'all');
@@ -57,7 +61,12 @@ export default function CustomPackPanel({
       return;
     }
 
-    onSaveCustomPhrases(check.phrases);
+    const saved = onSaveCustomPhrases(check.phrases);
+    if (!saved.ok) {
+      setStatusMsg({ type: 'err', text: saved.error });
+      return;
+    }
+
     setName('');
     setTrigger('.');
     setDescription('');
@@ -73,7 +82,11 @@ export default function CustomPackPanel({
       setStatusMsg({ type: 'err', text: check.error });
       return;
     }
-    onSaveCustomPhrases(check.phrases);
+    const saved = onSaveCustomPhrases(check.phrases);
+    if (!saved.ok) {
+      setStatusMsg({ type: 'err', text: saved.error });
+      return;
+    }
     setJsonInput('');
     setStatusMsg({
       type: 'ok',
@@ -90,7 +103,11 @@ export default function CustomPackPanel({
       setStatusMsg({ type: 'err', text: check.error });
       return;
     }
-    onSaveCustomPhrases(check.phrases);
+    const saved = onSaveCustomPhrases(check.phrases);
+    if (!saved.ok) {
+      setStatusMsg({ type: 'err', text: saved.error });
+      return;
+    }
     setStatusMsg({
       type: 'ok',
       text: `Imported ${check.phrases.length} phrase${check.phrases.length !== 1 ? 's' : ''} from ${file.name}.`,
@@ -156,7 +173,11 @@ export default function CustomPackPanel({
             <button
               type="button"
               onClick={() => {
-                onSaveCustomPhrases([]);
+                const saved = onSaveCustomPhrases([]);
+                if (!saved.ok) {
+                  setStatusMsg({ type: 'err', text: saved.error });
+                  return;
+                }
                 setStatusMsg({ type: 'ok', text: 'Cleared local custom phrases.' });
               }}
               className="px-3 py-1.5 rounded-lg text-xs font-medium"
