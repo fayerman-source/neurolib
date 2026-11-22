@@ -12,15 +12,37 @@ import {
 interface PhraseCardProps {
   phrase: DotPhrase;
   dialect?: EhrDialect;
+  slotValues?: Record<string, string>;
+  onSlotValuesChange?: (nextValues: Record<string, string>) => void;
 }
 
-export default function PhraseCard({ phrase, dialect = 'raw' }: PhraseCardProps) {
+const EMPTY_SLOT_VALUES: Record<string, string> = {};
+
+export default function PhraseCard({
+  phrase,
+  dialect = 'raw',
+  slotValues: controlledSlotValues,
+  onSlotValuesChange,
+}: PhraseCardProps) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [expanded, setExpanded] = useState(false);
   const [smartFillOpen, setSmartFillOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
-  // Transient in-memory slot state only — intentionally never persisted to storage
-  const [slotValues, setSlotValues] = useState<Record<string, string>>({});
+  // Transient in-memory fallback when uncontrolled — intentionally never persisted to storage
+  const [localSlotValues, setLocalSlotValues] = useState<Record<string, string>>({});
+
+  const slotValues = controlledSlotValues ?? localSlotValues;
+
+  const applySlotValues = (
+    updater: (prev: Record<string, string>) => Record<string, string>
+  ) => {
+    const next = updater(slotValues);
+    if (onSlotValuesChange) {
+      onSlotValuesChange(next);
+    } else {
+      setLocalSlotValues(next);
+    }
+  };
 
   const slots = useMemo(() => extractTemplateSlots(phrase.content), [phrase.content]);
   const compiled = useMemo(
@@ -41,14 +63,14 @@ export default function PhraseCard({ phrase, dialect = 'raw' }: PhraseCardProps)
   };
 
   const updateSlot = (slotId: string, nextValue: string) => {
-    setSlotValues((prev) => ({
+    applySlotValues((prev) => ({
       ...prev,
       [slotId]: prev[slotId] === nextValue ? '' : nextValue,
     }));
   };
 
   const setFreeTextSlot = (slotId: string, nextValue: string) => {
-    setSlotValues((prev) => ({
+    applySlotValues((prev) => ({
       ...prev,
       [slotId]: nextValue,
     }));
@@ -233,7 +255,7 @@ export default function PhraseCard({ phrase, dialect = 'raw' }: PhraseCardProps)
                 {hasAnyFilled && (
                   <button
                     type="button"
-                    onClick={() => setSlotValues({})}
+                    onClick={() => applySlotValues(() => EMPTY_SLOT_VALUES)}
                     className="text-xs font-medium px-2 py-0.5 rounded"
                     style={{
                       color: '#F8FAFC',

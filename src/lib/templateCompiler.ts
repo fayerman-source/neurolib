@@ -130,6 +130,57 @@ export function getDialectWildcard(dialect: EhrDialect): string | null {
   return null;
 }
 
+export function getPhraseSlotKey(phrase: { id: string; content: string }): string {
+  return `${phrase.id}\u0000${phrase.content}`;
+}
+
+export interface DialectStore {
+  getDialect: () => EhrDialect;
+  setDialect: (next: EhrDialect) => void;
+}
+
+export function createDialectStore(
+  storageKey: string,
+  getStorage: () => Pick<Storage, 'getItem' | 'setItem'> | undefined
+): DialectStore {
+  let memoryDialect: EhrDialect = 'epic';
+  let initializedFromStorage = false;
+
+  return {
+    getDialect() {
+      const storage = getStorage();
+      if (storage) {
+        try {
+          const raw = storage.getItem(storageKey);
+          if (raw === 'epic' || raw === 'cerner' || raw === 'raw') {
+            memoryDialect = raw;
+            initializedFromStorage = true;
+            return raw;
+          }
+          if (!initializedFromStorage) {
+            initializedFromStorage = true;
+          }
+        } catch {
+          // Fall back to in-memory selection when storage access is blocked
+        }
+      }
+      return memoryDialect;
+    },
+    setDialect(next: EhrDialect) {
+      memoryDialect = next;
+      initializedFromStorage = true;
+      const storage = getStorage();
+      if (storage) {
+        try {
+          storage.setItem(storageKey, next);
+        } catch {
+          // Best-effort persistence; in-memory selection remains updated
+        }
+      }
+    },
+  };
+}
+
 export function extractTemplateSlots(content: string): TemplateSlot[] {
   const slots: TemplateSlot[] = [];
   const regex = /\[([^\]]*)\]/g;

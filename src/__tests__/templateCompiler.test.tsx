@@ -1,7 +1,12 @@
 import { describe, test, expect } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { dotPhrases } from "@/data/dotPhrases";
-import { compileTemplate, extractTemplateSlots } from "@/lib/templateCompiler";
+import {
+  compileTemplate,
+  createDialectStore,
+  extractTemplateSlots,
+  getPhraseSlotKey,
+} from "@/lib/templateCompiler";
 import PhraseCard from "@/components/PhraseCard";
 
 describe("Smart-Fill slot extraction and EHR wildcard dialect compiler", () => {
@@ -130,5 +135,30 @@ describe("Smart-Fill slot extraction and EHR wildcard dialect compiler", () => {
     const strengthSlot = slots.find((s) => s.raw.startsWith("[RIGHT ARM ___/5"));
     expect(strengthSlot).toBeDefined();
     expect(strengthSlot?.choices).toBe(null);
+  });
+
+  test("createDialectStore updates in-memory dialect when localStorage throws and PhraseCard accepts controlled slotValues", () => {
+    const blockedStore = createDialectStore("neurolib:ehr-dialect", () => ({
+      getItem: () => {
+        throw new Error("SecurityError");
+      },
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+    }));
+
+    expect(blockedStore.getDialect()).toBe("epic");
+    blockedStore.setDialect("cerner");
+    expect(blockedStore.getDialect()).toBe("cerner");
+
+    const strokeHpi = dotPhrases.find((p) => p.id === "stroke-hpi")!;
+    const key1 = getPhraseSlotKey(strokeHpi);
+    const key2 = getPhraseSlotKey({ ...strokeHpi, content: "Updated: [NEW]" });
+    expect(key1).not.toBe(key2);
+
+    const html = renderToStaticMarkup(
+      <PhraseCard phrase={strokeHpi} dialect="epic" slotValues={{ "slot-0": "64" }} />
+    );
+    expect(html).toContain("Smart Fill (1/");
   });
 });
