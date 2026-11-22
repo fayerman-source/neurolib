@@ -172,7 +172,7 @@ EXCLUSION CRITERIA:
 □ Active internal bleeding
 □ Platelet count < 100,000
 □ Current use of anticoagulant with INR > 1.7, PT > 15s, or elevated aPTT
-□ Direct thrombin inhibitor or direct factor Xa inhibitor (DOAC: dabigatran, apixaban, rivaroxaban, edoxaban) within 48 hours unless coagulation assays are normal
+□ Direct thrombin inhibitor or direct factor Xa inhibitor (DOAC: dabigatran, apixaban, rivaroxaban, edoxaban) within 48 hours (assuming normal renal function; longer if renal impairment), unless appropriate drug-specific assays (calibrated anti-Xa activity for factor Xa inhibitors, or thrombin time / ecarin clotting time for dabigatran) are normal
 □ Blood glucose < 50 mg/dL
 □ Seizure at stroke onset with postictal state
 □ Stroke within past 3 months (except prior TIA)

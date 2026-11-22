@@ -140,6 +140,10 @@ describe("Acute thrombolytic dosing cap and ABCD2 range guardrails", () => {
     expect(tpa.content).toMatch(/maximum 9 mg/i);
     expect(tpa.content).toMatch(/maximum 81 mg/i);
     expect(tpa.content).toMatch(/direct thrombin|factor Xa|DOAC/i);
+    expect(tpa.content).toMatch(/normal renal function/i);
+    expect(tpa.content).toMatch(/calibrated anti-Xa/i);
+    expect(tpa.content).toMatch(/thrombin time.*ecarin clotting time/i);
+    expect(tpa.content).not.toContain("unless coagulation assays are normal");
     expect(tpa.source).toContain("AHA/ASA 2019");
   });
 
