@@ -15,7 +15,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && bun scripts/build-sw.ts",
     "lint": "eslint .",
     "test": "bun test"
   },

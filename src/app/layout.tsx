@@ -1,14 +1,21 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import { getPublicAssetPath } from "@/lib/assetPath";
+import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+export const viewport: Viewport = {
+  themeColor: "#4F6EF7",
+};
 
 export const metadata: Metadata = {
   title: "neurolib | Neurology Dot Phrases & NIHSS Calculator",
   description: "Copy-paste neurology documentation templates. Includes NIHSS calculator, stroke scales, and 15+ dot phrases for EHR documentation.",
   keywords: ["neurology", "dot phrases", "NIHSS", "stroke", "medical documentation", "EHR", "smart phrases"],
+  appleWebApp: {
+    capable: true,
+    title: "neurolib",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({
@@ -18,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-[#0B0F1A] text-white relative m-0 p-0`}>
+      <body className="bg-[#0B0F1A] text-white relative m-0 p-0">
         <div 
           className="fixed left-0 right-0 z-[-1] opacity-25 grayscale-[0.2] pointer-events-none h-[80vh]"
           style={{
@@ -54,6 +61,7 @@ export default function RootLayout({
             </div>
           </footer>
         </div>
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );
