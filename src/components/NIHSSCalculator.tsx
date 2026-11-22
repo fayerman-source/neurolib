@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-interface ScoreState {
+export interface ScoreState {
   loc: number;
   locQuestions: number;
   locCommands: number;
@@ -20,7 +20,7 @@ interface ScoreState {
   extinction: number;
 }
 
-const initialState: ScoreState = {
+export const initialState: ScoreState = {
   loc: 0,
   locQuestions: 0,
   locCommands: 0,
@@ -38,7 +38,7 @@ const initialState: ScoreState = {
   extinction: 0,
 };
 
-const descriptions = {
+export const descriptions = {
   loc: [
     '0 - Alert, keenly responsive',
     '1 - Not alert, but arousable by minor stimulation',
@@ -117,48 +117,77 @@ const descriptions = {
   ],
 };
 
+export const nihssFields = [
+  { key: 'loc' as const, label: '1a. Level of Consciousness', options: descriptions.loc },
+  { key: 'locQuestions' as const, label: '1b. LOC Questions', options: descriptions.locQuestions },
+  { key: 'locCommands' as const, label: '1c. LOC Commands', options: descriptions.locCommands },
+  { key: 'bestGaze' as const, label: '2. Best Gaze', options: descriptions.bestGaze },
+  { key: 'visual' as const, label: '3. Visual Fields', options: descriptions.visual },
+  { key: 'facial' as const, label: '4. Facial Movement', options: descriptions.facial },
+  { key: 'motorArmRight' as const, label: '5a. Motor Arm (R)', options: descriptions.motorArm },
+  { key: 'motorArmLeft' as const, label: '5b. Motor Arm (L)', options: descriptions.motorArm },
+  { key: 'motorLegRight' as const, label: '6a. Motor Leg (R)', options: descriptions.motorLeg },
+  { key: 'motorLegLeft' as const, label: '6b. Motor Leg (L)', options: descriptions.motorLeg },
+  { key: 'ataxia' as const, label: '7. Limb Ataxia', options: descriptions.ataxia },
+  { key: 'sensory' as const, label: '8. Sensory', options: descriptions.sensory },
+  { key: 'language' as const, label: '9. Best Language', options: descriptions.language },
+  { key: 'dysarthria' as const, label: '10. Dysarthria', options: descriptions.dysarthria },
+  { key: 'extinction' as const, label: '11. Extinction/Inattention', options: descriptions.extinction },
+];
+
+export function optionIndexToScore(_options: readonly string[], idx: number): ScoreState[keyof ScoreState] {
+  return idx;
+}
+
+export function computeTotalScore(scores: ScoreState): number {
+  return Object.values(scores).reduce((sum, val) => {
+    const numVal = typeof val === 'string' ? 0 : val;
+    return sum + numVal;
+  }, 0);
+}
+
+export function getStrokeSeverity(score: number): { label: string; color: string } {
+  if (score === 0) return { label: 'No stroke symptoms', color: '#22C55E' };
+  if (score <= 4) return { label: 'Minor stroke', color: '#22C55E' };
+  if (score <= 15) return { label: 'Moderate stroke', color: '#F59E0B' };
+  if (score <= 20) return { label: 'Moderate-severe stroke', color: '#F97316' };
+  return { label: 'Severe stroke', color: '#EF4444' };
+}
+
+export function formatNIHSSDocumentation(scores: ScoreState): string {
+  const totalScore = computeTotalScore(scores);
+  const items = [
+    `1a. Level of Consciousness: ${scores.loc}`,
+    `1b. LOC Questions: ${scores.locQuestions}`,
+    `1c. LOC Commands: ${scores.locCommands}`,
+    `2. Best Gaze: ${scores.bestGaze}`,
+    `3. Visual Fields: ${scores.visual}`,
+    `4. Facial Movement: ${scores.facial}`,
+    `5a. Motor Arm Right: ${scores.motorArmRight}`,
+    `5b. Motor Arm Left: ${scores.motorArmLeft}`,
+    `6a. Motor Leg Right: ${scores.motorLegRight}`,
+    `6b. Motor Leg Left: ${scores.motorLegLeft}`,
+    `7. Limb Ataxia: ${scores.ataxia}`,
+    `8. Sensory: ${scores.sensory}`,
+    `9. Best Language: ${scores.language}`,
+    `10. Dysarthria: ${scores.dysarthria}`,
+    `11. Extinction/Inattention: ${scores.extinction}`,
+    `TOTAL NIHSS: ${totalScore}`,
+  ];
+  return items.join('\n');
+}
+
 export default function NIHSSCalculator() {
   const [scores, setScores] = useState<ScoreState>(initialState);
   const [copied, setCopied] = useState(false);
 
-  const updateScore = (field: keyof ScoreState, value: number) => {
+  const updateScore = (field: keyof ScoreState, value: ScoreState[keyof ScoreState]) => {
     setScores((prev) => ({ ...prev, [field]: value }));
   };
 
-  const totalScore = Object.values(scores).reduce((sum, val) => {
-    const numVal = typeof val === 'string' ? 0 : val;
-    return sum + numVal;
-  }, 0);
+  const totalScore = computeTotalScore(scores);
 
-  const getStrokeSeverity = (score: number): { label: string; color: string } => {
-    if (score === 0) return { label: 'No stroke symptoms', color: '#22C55E' };
-    if (score <= 4) return { label: 'Minor stroke', color: '#22C55E' };
-    if (score <= 15) return { label: 'Moderate stroke', color: '#F59E0B' };
-    if (score <= 20) return { label: 'Moderate-severe stroke', color: '#F97316' };
-    return { label: 'Severe stroke', color: '#EF4444' };
-  };
-
-  const generateDocumentation = () => {
-    const items = [
-      `1a. Level of Consciousness: ${scores.loc}`,
-      `1b. LOC Questions: ${scores.locQuestions}`,
-      `1c. LOC Commands: ${scores.locCommands}`,
-      `2. Best Gaze: ${scores.bestGaze}`,
-      `3. Visual Fields: ${scores.visual}`,
-      `4. Facial Movement: ${scores.facial}`,
-      `5a. Motor Arm Right: ${scores.motorArmRight}`,
-      `5b. Motor Arm Left: ${scores.motorArmLeft}`,
-      `6a. Motor Leg Right: ${scores.motorLegRight}`,
-      `6b. Motor Leg Left: ${scores.motorLegLeft}`,
-      `7. Limb Ataxia: ${scores.ataxia}`,
-      `8. Sensory: ${scores.sensory}`,
-      `9. Best Language: ${scores.language}`,
-      `10. Dysarthria: ${scores.dysarthria}`,
-      `11. Extinction/Inattention: ${scores.extinction}`,
-      `TOTAL NIHSS: ${totalScore}`,
-    ];
-    return items.join('\n');
-  };
+  const generateDocumentation = () => formatNIHSSDocumentation(scores);
 
   const handleCopy = async () => {
     try {
@@ -220,23 +249,7 @@ export default function NIHSSCalculator() {
       </div>
 
       <div className="p-6 grid gap-4 md:grid-cols-2">
-        {[
-          { key: 'loc' as const, label: '1a. Level of Consciousness', options: descriptions.loc },
-          { key: 'locQuestions' as const, label: '1b. LOC Questions', options: descriptions.locQuestions },
-          { key: 'locCommands' as const, label: '1c. LOC Commands', options: descriptions.locCommands },
-          { key: 'bestGaze' as const, label: '2. Best Gaze', options: descriptions.bestGaze },
-          { key: 'visual' as const, label: '3. Visual Fields', options: descriptions.visual },
-          { key: 'facial' as const, label: '4. Facial Movement', options: descriptions.facial },
-          { key: 'motorArmRight' as const, label: '5a. Motor Arm (R)', options: descriptions.motorArm },
-          { key: 'motorArmLeft' as const, label: '5b. Motor Arm (L)', options: descriptions.motorArm },
-          { key: 'motorLegRight' as const, label: '6a. Motor Leg (R)', options: descriptions.motorLeg },
-          { key: 'motorLegLeft' as const, label: '6b. Motor Leg (L)', options: descriptions.motorLeg },
-          { key: 'ataxia' as const, label: '7. Limb Ataxia', options: descriptions.ataxia },
-          { key: 'sensory' as const, label: '8. Sensory', options: descriptions.sensory },
-          { key: 'language' as const, label: '9. Best Language', options: descriptions.language },
-          { key: 'dysarthria' as const, label: '10. Dysarthria', options: descriptions.dysarthria },
-          { key: 'extinction' as const, label: '11. Extinction/Inattention', options: descriptions.extinction },
-        ].map(({ key, label, options }) => (
+        {nihssFields.map(({ key, label, options }) => (
           <div 
             key={key}
             style={{
@@ -270,7 +283,7 @@ export default function NIHSSCalculator() {
                   role="radio"
                   aria-checked={scores[key] === idx}
                   aria-label={opt}
-                  onClick={() => updateScore(key, idx)}
+                  onClick={() => updateScore(key, optionIndexToScore(options, idx))}
                   className="px-3 py-1.5 text-xs transition-all"
                   style={{
                     background: scores[key] === idx ? '#4F6EF7' : 'rgba(255, 255, 255, 0.05)',
