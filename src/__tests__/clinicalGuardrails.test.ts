@@ -63,34 +63,51 @@ describe("Dot phrase schema and structural guardrails", () => {
 // Block A: NIHSS calculator and .nihssdoc scale guardrails (Defects #1, #2, #7)
 // ============================================================================
 describe("NIHSS scale and UN (Untestable) guardrails", () => {
-  test.failing("selecting UN on limb motor items scores 0 and formats as UN", () => {
+  test("selecting UN on limb, ataxia, and dysarthria items scores 0 and formats as UN", () => {
     const unIdx = descriptions.motorArm.findIndex((o) => o.startsWith("UN"));
+    const ataxiaUnIdx = descriptions.ataxia.findIndex((o) => o.startsWith("UN"));
+    const dysUnIdx = descriptions.dysarthria.findIndex((o) => o.startsWith("UN"));
     expect(unIdx).toBeGreaterThan(0);
+    expect(ataxiaUnIdx).toBeGreaterThan(0);
+    expect(dysUnIdx).toBeGreaterThan(0);
 
-    const singleUnState: ScoreState = {
+    const unState: ScoreState = {
       ...initialState,
       motorArmRight: optionIndexToScore(descriptions.motorArm, unIdx),
+      motorArmLeft: optionIndexToScore(descriptions.motorArm, unIdx),
+      motorLegRight: optionIndexToScore(descriptions.motorLeg, unIdx),
+      motorLegLeft: optionIndexToScore(descriptions.motorLeg, unIdx),
+      ataxia: optionIndexToScore(descriptions.ataxia, ataxiaUnIdx),
+      dysarthria: optionIndexToScore(descriptions.dysarthria, dysUnIdx),
     };
 
-    expect(computeTotalScore(singleUnState)).toBe(0);
-    const doc = formatNIHSSDocumentation(singleUnState);
+    expect(computeTotalScore(unState)).toBe(0);
+    const doc = formatNIHSSDocumentation(unState);
     expect(doc).toContain("5a. Motor Arm Right: UN");
+    expect(doc).toContain("5b. Motor Arm Left: UN");
+    expect(doc).toContain("6a. Motor Leg Right: UN");
+    expect(doc).toContain("6b. Motor Leg Left: UN");
+    expect(doc).toContain("7. Limb Ataxia: UN");
+    expect(doc).toContain("10. Dysarthria: UN");
     expect(doc).toContain("TOTAL NIHSS: 0");
   });
 
-  test.failing("NIHSS total score never exceeds 42 across any combination of options", () => {
+  test("NIHSS total score never exceeds 42 across any combination of options", () => {
     const maxNumericState: ScoreState = { ...initialState };
     const lastOptionState: ScoreState = { ...initialState };
+    const assignScore = (state: ScoreState, key: keyof ScoreState, val: number | "UN") => {
+      state[key] = val as never;
+    };
 
     for (const field of nihssFields) {
       const lastIdx = field.options.length - 1;
-      lastOptionState[field.key] = optionIndexToScore(field.options, lastIdx);
+      assignScore(lastOptionState, field.key, optionIndexToScore(field.options, lastIdx));
 
       let maxNumericIdx = 0;
       field.options.forEach((opt, idx) => {
         if (!opt.startsWith("UN")) maxNumericIdx = idx;
       });
-      maxNumericState[field.key] = optionIndexToScore(field.options, maxNumericIdx);
+      assignScore(maxNumericState, field.key, optionIndexToScore(field.options, maxNumericIdx));
     }
 
     expect(computeTotalScore(maxNumericState)).toBe(42);
@@ -103,13 +120,14 @@ describe("NIHSS scale and UN (Untestable) guardrails", () => {
     expect(nihssDocPhrase?.content).not.toContain("3 - Total gaze paresis");
   });
 
-  test.failing("Item 7 (Limb Ataxia) and Item 10 (Dysarthria) include UN options in calculator and template", () => {
+  test("Item 7 (Limb Ataxia) and Item 10 (Dysarthria) include UN options in calculator and template", () => {
     expect(descriptions.ataxia.some((o) => o.startsWith("UN"))).toBe(true);
     expect(descriptions.dysarthria.some((o) => o.startsWith("UN"))).toBe(true);
 
     const nihssDocPhrase = dotPhrases.find((p) => p.id === "nihss-documentation");
     expect(nihssDocPhrase?.content).toMatch(/7\. Limb Ataxia:[\s\S]*?UN\s*-/);
     expect(nihssDocPhrase?.content).toMatch(/10\. Dysarthria:[\s\S]*?UN\s*-/);
+    expect(nihssDocPhrase?.source).toContain("NINDS");
   });
 });
 

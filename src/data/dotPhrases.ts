@@ -81,11 +81,10 @@ PMH/PSH:
   □ 1 - Performs one correctly
   □ 2 - Performs neither
 
-2. Best Gaze: [0-3]
+2. Best Gaze: [0-2]
   □ 0 - Normal
   □ 1 - Partial gaze palsy
-  □ 2 - Forced deviation
-  □ 3 - Total gaze paresis
+  □ 2 - Forced deviation or total gaze paresis
 
 3. Visual Fields: [0-3]
   □ 0 - No visual loss
@@ -125,6 +124,7 @@ PMH/PSH:
   □ 0 - Absent
   □ 1 - Present in one limb
   □ 2 - Present in two or more limbs
+  □ UN - Amputation or joint fusion
 
 8. Sensory: [0-2]
   □ 0 - Normal
@@ -141,6 +141,7 @@ PMH/PSH:
   □ 0 - Normal
   □ 1 - Mild-moderate dysarthria
   □ 2 - Severe dysarthria
+  □ UN - Intubated or other physical barrier
 
 11. Extinction and Inattention: [0-2]
   □ 0 - No abnormality
@@ -150,6 +151,7 @@ PMH/PSH:
 TOTAL NIHSS SCORE: _____/42
 Examiner: _________ Date/Time: _________`,
     tags: ['stroke', 'NIHSS', 'assessment', 'scoring'],
+    source: 'National Institute of Neurological Disorders and Stroke (NINDS), NIH Stroke Scale (revised 2003); Brott T et al., Stroke 1989;20(7):864-870',
   },
   {
     id: 'tpa-eligibility',
