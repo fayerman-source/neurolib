@@ -50,6 +50,53 @@ export function togglePinnedId(current: readonly string[], phraseId: string): st
   return [...current, phraseId];
 }
 
+export interface PinnedStore {
+  getPinnedIds: () => readonly string[];
+  togglePin: (phraseId: string) => void;
+}
+
+export function createPinnedStore(
+  storageKey: string,
+  getStorage: () => Pick<Storage, 'getItem' | 'setItem'> | undefined
+): PinnedStore {
+  let memoryPinned: readonly string[] = [];
+  let cachedRaw: string | null | undefined = undefined;
+
+  return {
+    getPinnedIds() {
+      const storage = getStorage();
+      if (storage) {
+        try {
+          const raw = storage.getItem(storageKey);
+          if (raw !== cachedRaw) {
+            cachedRaw = raw;
+            if (raw !== null) {
+              memoryPinned = parsePinnedIds(raw);
+            }
+          }
+        } catch {
+          // Fall back to in-memory pinned IDs when storage is blocked
+        }
+      }
+      return memoryPinned;
+    },
+    togglePin(phraseId: string) {
+      const next = togglePinnedId(memoryPinned, phraseId);
+      memoryPinned = next;
+      const serialized = JSON.stringify(next);
+      cachedRaw = serialized;
+      const storage = getStorage();
+      if (storage) {
+        try {
+          storage.setItem(storageKey, serialized);
+        } catch {
+          // Best-effort persistence; in-memory state stays updated
+        }
+      }
+    },
+  };
+}
+
 export function validateCustomPackJson(rawJson: string): PackValidationResult {
   if (rawJson.length > MAX_RAW_PARSE_BYTES) {
     return { ok: false, error: 'Pack file exceeds 512 KB normalized size limit.' };
@@ -140,8 +187,6 @@ export function validateCustomPackJson(rawJson: string): PackValidationResult {
     });
   }
 
-  // Enforce the 512 KB cap on the canonical normalized JSON persisted to localStorage,
-  // guaranteeing that any accepted pack reloads cleanly and round-trips through pretty-printed export.
   const canonicalJson = JSON.stringify(validated);
   if (canonicalJson.length > MAX_PACK_BYTES) {
     return { ok: false, error: 'Pack exceeds 512 KB normalized size limit.' };
@@ -211,16 +256,35 @@ export function mergeAndRankPhrases(
   searchQuery: string,
   pinnedIds: readonly string[]
 ): DotPhrase[] {
+  // Custom phrases explicitly override built-in phrases by matching either ID or normalized .trigger,
+  // ensuring a user-saved trigger (e.g. '.tpaelig' under 'custom-tpaelig') never gets shadowed by a built-in.
   const customById = new Map<string, DotPhrase>();
+  const customByTrigger = new Map<string, DotPhrase>();
   for (const cp of customPhrases) {
     customById.set(cp.id, cp);
+    customByTrigger.set(cp.trigger.toLowerCase(), cp);
   }
 
-  const merged: DotPhrase[] = builtInPhrases.map((bp) => customById.get(bp.id) ?? bp);
-  const builtInIds = new Set(builtInPhrases.map((bp) => bp.id));
+  const usedCustomIds = new Set<string>();
+  const merged: DotPhrase[] = [];
+
+  for (const bp of builtInPhrases) {
+    const replacement =
+      customById.get(bp.id) ?? customByTrigger.get(bp.trigger.toLowerCase());
+    if (replacement) {
+      if (!usedCustomIds.has(replacement.id)) {
+        merged.push(replacement);
+        usedCustomIds.add(replacement.id);
+      }
+    } else {
+      merged.push(bp);
+    }
+  }
+
   for (const cp of customPhrases) {
-    if (!builtInIds.has(cp.id)) {
+    if (!usedCustomIds.has(cp.id)) {
       merged.push(cp);
+      usedCustomIds.add(cp.id);
     }
   }
 

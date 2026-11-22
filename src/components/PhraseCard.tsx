@@ -12,15 +12,21 @@ import {
 interface PhraseCardProps {
   phrase: DotPhrase;
   dialect?: EhrDialect;
+  slotValues?: Record<string, string>;
+  onSlotValuesChange?: (nextValues: Record<string, string>) => void;
   isPinned?: boolean;
   onTogglePin?: (phraseId: string) => void;
   isCustom?: boolean;
   onDeleteCustom?: (phraseId: string) => void;
 }
 
+const EMPTY_SLOT_VALUES: Record<string, string> = {};
+
 export default function PhraseCard({
   phrase,
   dialect = 'raw',
+  slotValues: controlledSlotValues,
+  onSlotValuesChange,
   isPinned = false,
   onTogglePin,
   isCustom = false,
@@ -30,8 +36,21 @@ export default function PhraseCard({
   const [expanded, setExpanded] = useState(false);
   const [smartFillOpen, setSmartFillOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
-  // Transient in-memory slot state only — intentionally never persisted to storage
-  const [slotValues, setSlotValues] = useState<Record<string, string>>({});
+  // Transient in-memory fallback when uncontrolled — intentionally never persisted to storage
+  const [localSlotValues, setLocalSlotValues] = useState<Record<string, string>>({});
+
+  const slotValues = controlledSlotValues ?? localSlotValues;
+
+  const applySlotValues = (
+    updater: (prev: Record<string, string>) => Record<string, string>
+  ) => {
+    const next = updater(slotValues);
+    if (onSlotValuesChange) {
+      onSlotValuesChange(next);
+    } else {
+      setLocalSlotValues(next);
+    }
+  };
 
   const slots = useMemo(() => extractTemplateSlots(phrase.content), [phrase.content]);
   const compiled = useMemo(
@@ -52,14 +71,14 @@ export default function PhraseCard({
   };
 
   const updateSlot = (slotId: string, nextValue: string) => {
-    setSlotValues((prev) => ({
+    applySlotValues((prev) => ({
       ...prev,
       [slotId]: prev[slotId] === nextValue ? '' : nextValue,
     }));
   };
 
   const setFreeTextSlot = (slotId: string, nextValue: string) => {
-    setSlotValues((prev) => ({
+    applySlotValues((prev) => ({
       ...prev,
       [slotId]: nextValue,
     }));
@@ -132,6 +151,7 @@ export default function PhraseCard({
               )}
             </div>
           </div>
+
           <div className="flex items-center gap-1.5">
             {isCustom && onDeleteCustom && (
               <button
@@ -188,45 +208,45 @@ export default function PhraseCard({
                 </svg>
               </button>
             )}
-          <button
-            onClick={handleCopy}
-            className="flex items-center justify-center transition-all"
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              background:
-                copyStatus === 'copied'
-                  ? 'rgba(34, 197, 94, 0.15)'
-                  : copyStatus === 'error'
-                    ? 'rgba(239, 68, 68, 0.15)'
-                    : 'rgba(255, 255, 255, 0.06)',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-            title={copyStatus === 'error' ? 'Copy failed — select text below' : 'Copy to clipboard'}
-            aria-label={
-              copyStatus === 'error'
-                ? 'Copy failed'
-                : copyStatus === 'copied'
-                  ? 'Copied to clipboard'
-                  : `Copy ${phrase.name}`
-            }
-          >
-            {copyStatus === 'copied' ? (
-              <svg className="w-4 h-4" style={{ color: '#22C55E' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : copyStatus === 'error' ? (
-              <svg className="w-4 h-4" style={{ color: '#EF4444' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" style={{ color: 'rgba(255, 255, 255, 0.6)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-              </svg>
-            )}
-          </button>
+            <button
+              onClick={handleCopy}
+              className="flex items-center justify-center transition-all"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background:
+                  copyStatus === 'copied'
+                    ? 'rgba(34, 197, 94, 0.15)'
+                    : copyStatus === 'error'
+                      ? 'rgba(239, 68, 68, 0.15)'
+                      : 'rgba(255, 255, 255, 0.06)',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+              title={copyStatus === 'error' ? 'Copy failed — select text below' : 'Copy to clipboard'}
+              aria-label={
+                copyStatus === 'error'
+                  ? 'Copy failed'
+                  : copyStatus === 'copied'
+                    ? 'Copied to clipboard'
+                    : `Copy ${phrase.name}`
+              }
+            >
+              {copyStatus === 'copied' ? (
+                <svg className="w-4 h-4" style={{ color: '#22C55E' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : copyStatus === 'error' ? (
+                <svg className="w-4 h-4" style={{ color: '#EF4444' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" style={{ color: 'rgba(255, 255, 255, 0.6)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
 
@@ -314,7 +334,7 @@ export default function PhraseCard({
                 {hasAnyFilled && (
                   <button
                     type="button"
-                    onClick={() => setSlotValues({})}
+                    onClick={() => applySlotValues(() => EMPTY_SLOT_VALUES)}
                     className="text-xs font-medium px-2 py-0.5 rounded"
                     style={{
                       color: '#F8FAFC',
@@ -339,28 +359,43 @@ export default function PhraseCard({
                         {slot.label}
                       </label>
                       {slot.choices ? (
-                        <div className="flex flex-wrap gap-1">
-                          {slot.choices.map((choice) => {
-                            const selected = currentVal === choice;
-                            return (
-                              <button
-                                key={choice}
-                                type="button"
-                                aria-pressed={selected}
-                                onClick={() => updateSlot(slot.id, choice)}
-                                className="px-2.5 py-1 rounded text-xs transition-all"
-                                style={{
-                                  background: selected ? '#4F6EF7' : 'rgba(255, 255, 255, 0.05)',
-                                  color: selected ? 'white' : 'rgba(255, 255, 255, 0.65)',
-                                  border: selected
-                                    ? '1px solid #4F6EF7'
-                                    : '1px solid rgba(255, 255, 255, 0.1)',
-                                }}
-                              >
-                                {choice}
-                              </button>
-                            );
-                          })}
+                        <div className="space-y-1.5">
+                          <div className="flex flex-wrap gap-1">
+                            {slot.choices.map((choice) => {
+                              const selected = currentVal === choice;
+                              return (
+                                <button
+                                  key={choice}
+                                  type="button"
+                                  aria-pressed={selected}
+                                  onClick={() => updateSlot(slot.id, choice)}
+                                  className="px-2.5 py-1 rounded text-xs transition-all"
+                                  style={{
+                                    background: selected ? '#4F6EF7' : 'rgba(255, 255, 255, 0.05)',
+                                    color: selected ? 'white' : 'rgba(255, 255, 255, 0.65)',
+                                    border: selected
+                                      ? '1px solid #4F6EF7'
+                                      : '1px solid rgba(255, 255, 255, 0.1)',
+                                  }}
+                                >
+                                  {choice}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <input
+                            id={`input-${phrase.id}-${slot.id}`}
+                            type="text"
+                            value={currentVal}
+                            onChange={(e) => setFreeTextSlot(slot.id, e.target.value)}
+                            placeholder={compiled.wildcard ? `Or enter custom (${compiled.wildcard})` : 'Or enter custom value'}
+                            className="w-full px-2.5 py-1 rounded text-xs outline-none"
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.03)',
+                              border: '1px solid rgba(255, 255, 255, 0.08)',
+                              color: '#F8FAFC',
+                            }}
+                          />
                         </div>
                       ) : (
                         <input

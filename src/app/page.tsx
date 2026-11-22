@@ -9,16 +9,20 @@ import EhrDialectSelector from '@/components/EhrDialectSelector';
 import CustomPackPanel from '@/components/CustomPackPanel';
 import { dotPhrases, CategoryId, DotPhrase } from '@/data/dotPhrases';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { compileTemplate, EhrDialect } from '@/lib/templateCompiler';
 import {
+  compileTemplate,
+  createDialectStore,
+  EhrDialect,
+  getPhraseSlotKey,
+} from '@/lib/templateCompiler';
+import {
+  createPinnedStore,
   CUSTOM_PACK_STORAGE_KEY,
   mergeAndRankPhrases,
-  parsePinnedIds,
   PINNED_STORAGE_KEY,
   resolveQuickCopyPhrase,
   saveCustomPhrasesToStorage,
   StorageSaveResult,
-  togglePinnedId,
   validateCustomPackJson,
 } from '@/lib/packStorage';
 
@@ -26,8 +30,17 @@ const DIALECT_STORAGE_KEY = 'neurolib:ehr-dialect';
 const EMPTY_IDS: readonly string[] = [];
 const EMPTY_PHRASES: readonly DotPhrase[] = [];
 
-let cachedPinnedRaw: string | null = null;
-let cachedPinnedParsed: readonly string[] = EMPTY_IDS;
+const getSafeLocalStorage = (): Storage | undefined => {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+};
+
+const dialectStore = createDialectStore(DIALECT_STORAGE_KEY, getSafeLocalStorage);
+const pinnedStore = createPinnedStore(PINNED_STORAGE_KEY, getSafeLocalStorage);
 
 let cachedCustomRaw: string | null = null;
 let cachedCustomParsed: readonly DotPhrase[] = EMPTY_PHRASES;
@@ -46,15 +59,7 @@ function notifyStoreChange() {
 }
 
 function getClientDialect(): EhrDialect {
-  try {
-    const stored = window.localStorage.getItem(DIALECT_STORAGE_KEY);
-    if (stored === 'epic' || stored === 'cerner' || stored === 'raw') {
-      return stored;
-    }
-  } catch {
-    // Ignore storage errors
-  }
-  return 'epic';
+  return dialectStore.getDialect();
 }
 
 function getServerDialect(): EhrDialect {
@@ -62,16 +67,7 @@ function getServerDialect(): EhrDialect {
 }
 
 function getClientPinnedIds(): readonly string[] {
-  try {
-    const raw = window.localStorage.getItem(PINNED_STORAGE_KEY);
-    if (raw !== cachedPinnedRaw) {
-      cachedPinnedRaw = raw;
-      cachedPinnedParsed = parsePinnedIds(raw);
-    }
-    return cachedPinnedParsed;
-  } catch {
-    return EMPTY_IDS;
-  }
+  return pinnedStore.getPinnedIds();
 }
 
 function getServerPinnedIds(): readonly string[] {
@@ -79,8 +75,10 @@ function getServerPinnedIds(): readonly string[] {
 }
 
 function getClientCustomPhrases(): readonly DotPhrase[] {
+  const storage = getSafeLocalStorage();
+  if (!storage) return EMPTY_PHRASES;
   try {
-    const raw = window.localStorage.getItem(CUSTOM_PACK_STORAGE_KEY);
+    const raw = storage.getItem(CUSTOM_PACK_STORAGE_KEY);
     if (raw !== cachedCustomRaw) {
       cachedCustomRaw = raw;
       if (!raw) {
@@ -106,6 +104,11 @@ export default function Home() {
   const [showNIHSS, setShowNIHSS] = useState(false);
   const [showCustomPack, setShowCustomPack] = useState(false);
   const [quickCopiedTrigger, setQuickCopiedTrigger] = useState<string | null>(null);
+  // Keyed by getPhraseSlotKey(phrase) (id + content), so filtering preserves active drafts
+  // while replacing a phrase's content via custom pack cleanly isolates/resets slot values.
+  const [slotValuesByPhrase, setSlotValuesByPhrase] = useState<
+    Record<string, Record<string, string>>
+  >({});
 
   const ehrDialect = useSyncExternalStore(subscribeStore, getClientDialect, getServerDialect);
   const pinnedIds = useSyncExternalStore(subscribeStore, getClientPinnedIds, getServerPinnedIds);
@@ -129,22 +132,23 @@ export default function Home() {
   }, [customPhrases, activeCategory, searchQuery, pinnedIds]);
 
   const handleDialectChange = (nextDialect: EhrDialect) => {
-    try {
-      window.localStorage.setItem(DIALECT_STORAGE_KEY, nextDialect);
-      notifyStoreChange();
-    } catch {
-      // Ignore storage errors
-    }
+    dialectStore.setDialect(nextDialect);
+    notifyStoreChange();
   };
 
   const handleTogglePin = (phraseId: string) => {
-    try {
-      const next = togglePinnedId(pinnedIds, phraseId);
-      window.localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(next));
-      notifyStoreChange();
-    } catch {
-      // Ignore storage errors
-    }
+    pinnedStore.togglePin(phraseId);
+    notifyStoreChange();
+  };
+
+  const handlePhraseSlotsChange = (
+    slotKey: string,
+    nextValues: Record<string, string>
+  ) => {
+    setSlotValuesByPhrase((prev) => ({
+      ...prev,
+      [slotKey]: nextValues,
+    }));
   };
 
   const handleSaveCustomPhrases = (next: DotPhrase[]): StorageSaveResult => {
@@ -178,7 +182,8 @@ export default function Home() {
       pinnedIds
     );
     if (!top) return;
-    const compiled = compileTemplate(top.content, {}, ehrDialect);
+    const activeSlots = slotValuesByPhrase[getPhraseSlotKey(top)] ?? {};
+    const compiled = compileTemplate(top.content, activeSlots, ehrDialect);
     const ok = await copyTextToClipboard(compiled.text);
     if (ok) {
       setQuickCopiedTrigger(top.trigger);
@@ -310,17 +315,22 @@ export default function Home() {
 
         {filteredPhrases.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            {filteredPhrases.map((phrase) => (
-              <PhraseCard
-                key={phrase.id}
-                phrase={phrase}
-                dialect={ehrDialect}
-                isPinned={pinnedIdSet.has(phrase.id)}
-                onTogglePin={handleTogglePin}
-                isCustom={customIdSet.has(phrase.id)}
-                onDeleteCustom={handleDeleteCustomPhrase}
-              />
-            ))}
+            {filteredPhrases.map((phrase) => {
+              const slotKey = getPhraseSlotKey(phrase);
+              return (
+                <PhraseCard
+                  key={slotKey}
+                  phrase={phrase}
+                  dialect={ehrDialect}
+                  slotValues={slotValuesByPhrase[slotKey]}
+                  onSlotValuesChange={(next) => handlePhraseSlotsChange(slotKey, next)}
+                  isPinned={pinnedIdSet.has(phrase.id)}
+                  onTogglePin={handleTogglePin}
+                  isCustom={customIdSet.has(phrase.id)}
+                  onDeleteCustom={handleDeleteCustomPhrase}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-20 bg-white/[0.02] border border-dashed border-white/5 rounded-3xl">

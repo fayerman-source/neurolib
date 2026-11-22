@@ -1,6 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { dotPhrases, DotPhrase } from "@/data/dotPhrases";
 import {
+  createPinnedStore,
   MAX_PACK_BYTES,
   mergeAndRankPhrases,
   parsePinnedIds,
@@ -10,6 +11,7 @@ import {
   togglePinnedId,
   validateCustomPackJson,
 } from "@/lib/packStorage";
+import { getPhraseSlotKey } from "@/lib/templateCompiler";
 
 describe("Command-palette ranking, pinned favorites, and local JSON packs", () => {
   test("togglePinnedId and parsePinnedIds add, remove, and deduplicate ids safely", () => {
@@ -159,5 +161,43 @@ describe("Command-palette ranking, pinned favorites, and local JSON packs", () =
       const exportedReimport = validateCustomPackJson(serializeCustomPack(accepted.phrases));
       expect(exportedReimport.ok).toBe(true);
     }
+  });
+
+  test("custom phrase sharing a built-in trigger overrides the built-in cleanly without duplicates", () => {
+    const customTpa: DotPhrase = {
+      id: "custom-tpaelig",
+      name: "Local Hospital Thrombolytic Checklist",
+      trigger: ".tpaelig",
+      category: "stroke",
+      description: "Custom override for .tpaelig",
+      content: "Custom protocol: [APPROVED/DECLINED]",
+      tags: ["stroke", "custom"],
+    };
+
+    const mergedAll = mergeAndRankPhrases(dotPhrases, [customTpa], "all", "", []);
+    const tpaMatches = mergedAll.filter((p) => p.trigger === ".tpaelig");
+    expect(tpaMatches).toHaveLength(1);
+    expect(tpaMatches[0]?.id).toBe("custom-tpaelig");
+
+    const quick = resolveQuickCopyPhrase(dotPhrases, [customTpa], "all", ".tpaelig", []);
+    expect(quick?.id).toBe("custom-tpaelig");
+    expect(quick?.content).toContain("Custom protocol");
+  });
+
+  test("isolates Smart-Fill slot keys when replacing a phrase's content and keeps pins working without storage", () => {
+    const original = { id: "stroke-hpi", content: "Side: [SIDE]" };
+    const replaced = { id: "stroke-hpi", content: "Dose: [DOSE]" };
+    expect(getPhraseSlotKey(original)).not.toBe(getPhraseSlotKey(replaced));
+
+    const pinStore = createPinnedStore("neurolib:pinned-ids", () => ({
+      getItem: () => {
+        throw new Error("SecurityError");
+      },
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+    }));
+    pinStore.togglePin("gbs-workup");
+    expect(pinStore.getPinnedIds()).toEqual(["gbs-workup"]);
   });
 });
