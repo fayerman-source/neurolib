@@ -1,17 +1,70 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useSyncExternalStore } from 'react';
 import SearchBar from '@/components/SearchBar';
 import CategoryNav from '@/components/CategoryNav';
 import PhraseCard from '@/components/PhraseCard';
 import NIHSSCalculator from '@/components/NIHSSCalculator';
+import EhrDialectSelector from '@/components/EhrDialectSelector';
 import { dotPhrases, CategoryId } from '@/data/dotPhrases';
 import { filterDotPhrases } from '@/lib/filterPhrases';
+import {
+  createDialectStore,
+  EhrDialect,
+  getPhraseSlotKey,
+} from '@/lib/templateCompiler';
+
+const DIALECT_STORAGE_KEY = 'neurolib:ehr-dialect';
+const dialectStore = createDialectStore(DIALECT_STORAGE_KEY, () => {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+});
+
+function subscribeDialect(callback: () => void): () => void {
+  window.addEventListener('neurolib-dialect-change', callback);
+  window.addEventListener('storage', callback);
+  return () => {
+    window.removeEventListener('neurolib-dialect-change', callback);
+    window.removeEventListener('storage', callback);
+  };
+}
+
+function getClientDialect(): EhrDialect {
+  return dialectStore.getDialect();
+}
+
+function getServerDialect(): EhrDialect {
+  return 'epic';
+}
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showNIHSS, setShowNIHSS] = useState(false);
+  // Page-level transient in-memory Smart-Fill drafts so category/search filtering preserves active notes
+  const [slotValuesByPhrase, setSlotValuesByPhrase] = useState<
+    Record<string, Record<string, string>>
+  >({});
+  const ehrDialect = useSyncExternalStore(subscribeDialect, getClientDialect, getServerDialect);
+
+  const handleDialectChange = (nextDialect: EhrDialect) => {
+    dialectStore.setDialect(nextDialect);
+    window.dispatchEvent(new Event('neurolib-dialect-change'));
+  };
+
+  const handlePhraseSlotsChange = (
+    slotKey: string,
+    nextValues: Record<string, string>
+  ) => {
+    setSlotValuesByPhrase((prev) => ({
+      ...prev,
+      [slotKey]: nextValues,
+    }));
+  };
 
   const filteredPhrases = useMemo(() => {
     return filterDotPhrases(dotPhrases, activeCategory, searchQuery);
@@ -82,9 +135,10 @@ export default function Home() {
         }}
       >
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="max-w-3xl mx-auto space-y-4">
             <SearchBar onSearch={setSearchQuery} />
             <CategoryNav activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
+            <EhrDialectSelector dialect={ehrDialect} onChange={handleDialectChange} />
           </div>
         </div>
       </div>
@@ -107,9 +161,18 @@ export default function Home() {
 
         {filteredPhrases.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            {filteredPhrases.map((phrase) => (
-              <PhraseCard key={phrase.id} phrase={phrase} />
-            ))}
+            {filteredPhrases.map((phrase) => {
+              const slotKey = getPhraseSlotKey(phrase);
+              return (
+                <PhraseCard
+                  key={slotKey}
+                  phrase={phrase}
+                  dialect={ehrDialect}
+                  slotValues={slotValuesByPhrase[slotKey]}
+                  onSlotValuesChange={(next) => handlePhraseSlotsChange(slotKey, next)}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-20 bg-white/[0.02] border border-dashed border-white/5 rounded-3xl">
