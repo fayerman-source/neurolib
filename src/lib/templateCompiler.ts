@@ -144,7 +144,7 @@ export function createDialectStore(
   getStorage: () => Pick<Storage, 'getItem' | 'setItem'> | undefined
 ): DialectStore {
   let memoryDialect: EhrDialect = 'epic';
-  let initializedFromStorage = false;
+  let lastObservedRaw: string | null | undefined = undefined;
 
   return {
     getDialect() {
@@ -152,13 +152,11 @@ export function createDialectStore(
       if (storage) {
         try {
           const raw = storage.getItem(storageKey);
-          if (raw === 'epic' || raw === 'cerner' || raw === 'raw') {
-            memoryDialect = raw;
-            initializedFromStorage = true;
-            return raw;
-          }
-          if (!initializedFromStorage) {
-            initializedFromStorage = true;
+          if (raw !== lastObservedRaw) {
+            lastObservedRaw = raw;
+            if (raw === 'epic' || raw === 'cerner' || raw === 'raw') {
+              memoryDialect = raw;
+            }
           }
         } catch {
           // Fall back to in-memory selection when storage access is blocked
@@ -168,13 +166,13 @@ export function createDialectStore(
     },
     setDialect(next: EhrDialect) {
       memoryDialect = next;
-      initializedFromStorage = true;
       const storage = getStorage();
       if (storage) {
         try {
           storage.setItem(storageKey, next);
+          lastObservedRaw = next;
         } catch {
-          // Best-effort persistence; in-memory selection remains updated
+          // Keep lastObservedRaw unchanged so a failed write is not overwritten by stale stored data
         }
       }
     },
