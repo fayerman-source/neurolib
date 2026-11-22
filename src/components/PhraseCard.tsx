@@ -2,23 +2,26 @@
 
 import { useState } from 'react';
 import { DotPhrase } from '@/data/dotPhrases';
+import { copyTextToClipboard } from '@/lib/clipboard';
 
 interface PhraseCardProps {
   phrase: DotPhrase;
 }
 
 export default function PhraseCard({ phrase }: PhraseCardProps) {
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(phrase.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+    const ok = await copyTextToClipboard(phrase.content);
+    if (ok) {
+      setCopyStatus('copied');
+      setTimeout(() => setCopyStatus('idle'), 2000);
+    } else {
+      setCopyStatus('error');
+      setExpanded(true);
+      setTimeout(() => setCopyStatus('idle'), 3500);
     }
   };
 
@@ -65,15 +68,25 @@ export default function PhraseCard({ phrase }: PhraseCardProps) {
               width: '32px',
               height: '32px',
               borderRadius: '8px',
-              background: copied ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+              background:
+                copyStatus === 'copied'
+                  ? 'rgba(34, 197, 94, 0.15)'
+                  : copyStatus === 'error'
+                    ? 'rgba(239, 68, 68, 0.15)'
+                    : 'rgba(255, 255, 255, 0.06)',
               border: 'none',
               cursor: 'pointer',
             }}
-            title="Copy to clipboard"
+            title={copyStatus === 'error' ? 'Copy failed — select text below' : 'Copy to clipboard'}
+            aria-label={copyStatus === 'error' ? 'Copy failed' : copyStatus === 'copied' ? 'Copied to clipboard' : `Copy ${phrase.name}`}
           >
-            {copied ? (
+            {copyStatus === 'copied' ? (
               <svg className="w-4 h-4" style={{ color: '#22C55E' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : copyStatus === 'error' ? (
+              <svg className="w-4 h-4" style={{ color: '#EF4444' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             ) : (
               <svg className="w-4 h-4" style={{ color: 'rgba(255, 255, 255, 0.6)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,6 +95,12 @@ export default function PhraseCard({ phrase }: PhraseCardProps) {
             )}
           </button>
         </div>
+
+        {copyStatus === 'error' && (
+          <p role="alert" className="text-xs mb-2" style={{ color: '#EF4444' }}>
+            Clipboard unavailable — select and copy the expanded template text manually.
+          </p>
+        )}
 
         <p className="text-sm mb-3" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>{phrase.description}</p>
 

@@ -6,6 +6,7 @@ import CategoryNav from '@/components/CategoryNav';
 import PhraseCard from '@/components/PhraseCard';
 import NIHSSCalculator from '@/components/NIHSSCalculator';
 import { dotPhrases, CategoryId } from '@/data/dotPhrases';
+import { filterDotPhrases } from '@/lib/filterPhrases';
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
@@ -13,15 +14,7 @@ export default function Home() {
   const [showNIHSS, setShowNIHSS] = useState(false);
 
   const filteredPhrases = useMemo(() => {
-    return dotPhrases.filter((phrase) => {
-      const matchesCategory = activeCategory === 'all' || phrase.category === activeCategory;
-      const matchesSearch =
-        searchQuery === '' ||
-        phrase.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        phrase.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        phrase.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesCategory && matchesSearch;
-    });
+    return filterDotPhrases(dotPhrases, activeCategory, searchQuery);
   }, [activeCategory, searchQuery]);
 
   return (
