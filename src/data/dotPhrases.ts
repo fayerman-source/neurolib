@@ -50,12 +50,13 @@ Pertinent negatives: No chest pain, no palpitations, no shortness of breath, no 
 PMH/PSH:
 - Prior stroke/TIA: [YES/NO - DATE]
 - Atrial fibrillation: [YES/NO - if yes, on anticoagulation: YES/NO]
-- Hypertension: [YES]
-- Diabetes: [YES]
-- Hyperlipidemia: [YES]
+- Hypertension: [YES/NO]
+- Diabetes: [YES/NO]
+- Hyperlipidemia: [YES/NO]
 - Smoking: [CURRENT/FORMER/NEVER]
 - Coronary artery disease: [YES/NO]`,
     tags: ['stroke', 'HPI', 'admission', 'consult'],
+    source: 'AHA/ASA 2019 Acute Ischemic Stroke Guidelines (Powers WJ et al., Stroke 2019;50(12):e344-e418)',
   },
   {
     id: 'nihss-documentation',
@@ -81,11 +82,10 @@ PMH/PSH:
   □ 1 - Performs one correctly
   □ 2 - Performs neither
 
-2. Best Gaze: [0-3]
+2. Best Gaze: [0-2]
   □ 0 - Normal
   □ 1 - Partial gaze palsy
-  □ 2 - Forced deviation
-  □ 3 - Total gaze paresis
+  □ 2 - Forced deviation or total gaze paresis
 
 3. Visual Fields: [0-3]
   □ 0 - No visual loss
@@ -125,6 +125,7 @@ PMH/PSH:
   □ 0 - Absent
   □ 1 - Present in one limb
   □ 2 - Present in two or more limbs
+  □ UN - Amputation or joint fusion
 
 8. Sensory: [0-2]
   □ 0 - Normal
@@ -141,6 +142,7 @@ PMH/PSH:
   □ 0 - Normal
   □ 1 - Mild-moderate dysarthria
   □ 2 - Severe dysarthria
+  □ UN - Intubated or other physical barrier
 
 11. Extinction and Inattention: [0-2]
   □ 0 - No abnormality
@@ -150,6 +152,7 @@ PMH/PSH:
 TOTAL NIHSS SCORE: _____/42
 Examiner: _________ Date/Time: _________`,
     tags: ['stroke', 'NIHSS', 'assessment', 'scoring'],
+    source: 'National Institute of Neurological Disorders and Stroke (NINDS), NIH Stroke Scale (revised 2003); Brott T et al., Stroke 1989;20(7):864-870',
   },
   {
     id: 'tpa-eligibility',
@@ -171,7 +174,8 @@ EXCLUSION CRITERIA:
 □ Recent intracranial/spinal surgery or head trauma (≤3 months)
 □ Active internal bleeding
 □ Platelet count < 100,000
-□ Current use of anticoagulant with INR > 1.7
+□ Current use of anticoagulant with INR > 1.7, PT > 15s, or elevated aPTT
+□ Direct thrombin inhibitor or direct factor Xa inhibitor (DOAC: dabigatran, apixaban, rivaroxaban, edoxaban) within 48 hours (assuming normal renal function; longer if renal impairment), unless appropriate drug-specific assays (calibrated anti-Xa activity for factor Xa inhibitors, or thrombin time / ecarin clotting time for dabigatran) are normal
 □ Blood glucose < 50 mg/dL
 □ Seizure at stroke onset with postictal state
 □ Stroke within past 3 months (except prior TIA)
@@ -190,13 +194,14 @@ RELATIVE CONTRAINDICATIONS (consider risk/benefit):
 
 DECISION: □ APPROVED FOR tPA  □ DECLINED - Reason: ___________
 
-Dose: [0.9 mg/kg] x [WEIGHT] kg = [TOTAL] mg
-  - 10% bolus over 1 minute: [BOLUS] mg
-  - Remaining 90% over 60 minutes: [INFUSION] mg
+Dose: [0.9 mg/kg] x [WEIGHT] kg = [TOTAL] mg (MAXIMUM 90 mg total dose)
+  - 10% bolus over 1 minute: [BOLUS] mg (maximum 9 mg)
+  - Remaining 90% over 60 minutes: [INFUSION] mg (maximum 81 mg)
 
 Consent obtained: □ Yes
 BP: ____/____ mmHg - Required < 185/110 before treatment`,
     tags: ['stroke', 'tPA', 'treatment', 'eligibility', 'alteplase'],
+    source: 'AHA/ASA 2019 Acute Ischemic Stroke Guidelines (Powers WJ et al., Stroke 2019;50(12):e344-e418); FDA Activase (alteplase) Prescribing Information',
   },
   {
     id: 'stroke-discharge',
@@ -301,13 +306,14 @@ LAST KNOWN WELL: [DATE/TIME]
 ABCD² SCORE (Risk of stroke after TIA):
 - Age ≥60: [0/1]
 - BP ≥140/90: [0/1]
-- Clinical features: [0/1] (unilateral weakness) or [0] (speech disturbance alone)
+- Clinical features: [0] (other), [1] (speech disturbance without weakness), or [2] (unilateral weakness)
 - Duration: [0] (<10 min), [1] (10-59 min), or [2] (≥60 min)
 - Diabetes: [0/1]
 TOTAL: ___/7
 
 ABCD² Risk Category: [Low (0-3) / Moderate (4-5) / High (6-7)]`,
     tags: ['TIA', 'HPI', 'ABCD2', 'stroke risk'],
+    source: 'Johnston SC et al., Validation and refinement of scores to predict very early stroke risk after transient ischaemic attack (ABCD2 score), Lancet 2007;369(9558):283-292',
   },
   {
     id: 'tia-workup',
@@ -362,9 +368,9 @@ Small Vessel Disease:
 □ Statin
 
 Cryptogenic:
-□ Antiplatelet therapy
-□ Consider anticoagulation if cryptogenic with ESUS criteria met`,
+□ Antiplatelet therapy`,
     tags: ['TIA', 'workup', 'diagnosis', 'etiology'],
+    source: 'AHA/ASA 2021 Secondary Stroke Prevention Guidelines (Kleindorfer DO et al., Stroke 2021;52(7):e364-e467)',
   },
   {
     id: 'migraine-hpi',
@@ -990,7 +996,7 @@ GENETIC:
 □ Ataxia panel: [Spinocerebellar ataxia (SCA) 1,2,3,6,7 / Friedreich ataxia / Fragile X]
 □ Mitochondrial testing
 □ Vitamin E level
-□ Very long chain fatty acids (if VLCAD suspected)
+□ Very long chain fatty acids (if adrenoleukodystrophy / AMN suspected)
 
 AUTOIMMUNE:
 □ Anti-GAD
@@ -1017,6 +1023,7 @@ SPECIFIC TREATMENTS:
 - Paraneoplastic: Treat underlying tumor + immunotherapy
 - Hereditary: Supportive, genetic counseling`,
     tags: ['ataxia', 'workup', 'diagnosis', 'cerebellar'],
+    source: 'International Recommendations for the Diagnosis and Management of Patients With Adrenoleukodystrophy (Engelen M et al., Neurology 2022;99(21):940-951)',
   },
   {
     id: 'gbs-workup',
@@ -1084,7 +1091,6 @@ Other:
 TREATMENT DECISION:
 □ IVIG: [0.4 g/kg/day x 5 days]
 □ PLEX: [5 exchanges over 10-14 days]
-□ Both (if severe)
 □ No treatment (mild, stable)
 
 MONITORING:
@@ -1097,5 +1103,6 @@ MONITORING:
 PROGNOSIS:
 □ Poor prognosis indicators: [Rapid progression/Respiratory failure/Axonal variant/Elderly/High CSF protein]`,
     tags: ['GBS', 'Guillain-Barré', 'workup', 'neuropathy', 'weakness'],
+    source: 'AAN Practice Parameter: Immunotherapy for Guillain-Barre syndrome (Hughes RAC et al., Neurology 2003;61(6):736-740); EAN/PNS Guideline on diagnosis and treatment of Guillain-Barre syndrome (van Doorn PA et al., Eur J Neurol 2023;30(12):3646-3674)',
   },
 ];

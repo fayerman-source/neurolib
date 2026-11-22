@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { copyTextToClipboard } from '@/lib/clipboard';
 
+export type NIHSSScoreValue = number | 'UN';
+
 export interface ScoreState {
   loc: number;
   locQuestions: number;
@@ -10,14 +12,14 @@ export interface ScoreState {
   bestGaze: number;
   visual: number;
   facial: number;
-  motorArmRight: number;
-  motorArmLeft: number;
-  motorLegRight: number;
-  motorLegLeft: number;
-  ataxia: number;
+  motorArmRight: NIHSSScoreValue;
+  motorArmLeft: NIHSSScoreValue;
+  motorLegRight: NIHSSScoreValue;
+  motorLegLeft: NIHSSScoreValue;
+  ataxia: NIHSSScoreValue;
   sensory: number;
   language: number;
-  dysarthria: number;
+  dysarthria: NIHSSScoreValue;
   extinction: number;
 }
 
@@ -59,8 +61,7 @@ export const descriptions = {
   bestGaze: [
     '0 - Normal',
     '1 - Partial gaze palsy',
-    '2 - Forced deviation',
-    '3 - Total gaze paresis',
+    '2 - Forced deviation or total gaze paresis',
   ],
   visual: [
     '0 - No visual loss',
@@ -94,6 +95,7 @@ export const descriptions = {
     '0 - Absent',
     '1 - Present in one limb',
     '2 - Present in two or more limbs',
+    'UN - Amputation or joint fusion',
   ],
   sensory: [
     '0 - Normal',
@@ -110,6 +112,7 @@ export const descriptions = {
     '0 - Normal',
     '1 - Mild-moderate slurred speech',
     '2 - Severe dysarthria, unintelligible',
+    'UN - Intubated or other physical barrier',
   ],
   extinction: [
     '0 - No abnormality',
@@ -136,12 +139,20 @@ export const nihssFields = [
   { key: 'extinction' as const, label: '11. Extinction/Inattention', options: descriptions.extinction },
 ];
 
-export function optionIndexToScore(_options: readonly string[], idx: number): ScoreState[keyof ScoreState] {
-  return idx;
+export function optionIndexToScore(options: readonly string[], idx: number): NIHSSScoreValue {
+  const opt = options[idx] ?? '';
+  return opt.startsWith('UN') ? 'UN' : idx;
+}
+
+export function scoreToOptionLabel(options: readonly string[], val: NIHSSScoreValue): string {
+  if (val === 'UN') {
+    return options.find((opt) => opt.startsWith('UN')) ?? 'UN - Untestable';
+  }
+  return options[val] ?? '';
 }
 
 export function computeTotalScore(scores: ScoreState): number {
-  return Object.values(scores).reduce((sum, val) => {
+  return (Object.values(scores) as NIHSSScoreValue[]).reduce<number>((sum, val) => {
     const numVal = typeof val === 'string' ? 0 : val;
     return sum + numVal;
   }, 0);
@@ -279,33 +290,37 @@ export default function NIHSSCalculator() {
               role="radiogroup" 
               aria-label={label}
             >
-              {options.map((opt, idx) => (
-                <button
-                  key={idx}
-                  role="radio"
-                  aria-checked={scores[key] === idx}
-                  aria-label={opt}
-                  onClick={() => updateScore(key, optionIndexToScore(options, idx))}
-                  className="px-3 py-1.5 text-xs transition-all"
-                  style={{
-                    background: scores[key] === idx ? '#4F6EF7' : 'rgba(255, 255, 255, 0.05)',
-                    border: scores[key] === idx ? '1px solid #4F6EF7' : '1px solid rgba(255, 255, 255, 0.1)',
-                    color: scores[key] === idx ? 'white' : 'rgba(255, 255, 255, 0.6)',
-                    borderRadius: '6px',
-                    boxShadow: scores[key] === idx ? '0 0 12px rgba(79, 110, 247, 0.6), inset 0 0 8px rgba(79, 110, 247, 0.2)' : 'none',
-                    fontWeight: scores[key] === idx ? 600 : 400,
-                  }}
-                >
-                  {opt.split(' - ')[0]}
-                </button>
-              ))}
+              {options.map((opt, idx) => {
+                const optionValue = optionIndexToScore(options, idx);
+                const isSelected = scores[key] === optionValue;
+                return (
+                  <button
+                    key={idx}
+                    role="radio"
+                    aria-checked={isSelected}
+                    aria-label={opt}
+                    onClick={() => updateScore(key, optionValue)}
+                    className="px-3 py-1.5 text-xs transition-all"
+                    style={{
+                      background: isSelected ? '#4F6EF7' : 'rgba(255, 255, 255, 0.05)',
+                      border: isSelected ? '1px solid #4F6EF7' : '1px solid rgba(255, 255, 255, 0.1)',
+                      color: isSelected ? 'white' : 'rgba(255, 255, 255, 0.6)',
+                      borderRadius: '6px',
+                      boxShadow: isSelected ? '0 0 12px rgba(79, 110, 247, 0.6), inset 0 0 8px rgba(79, 110, 247, 0.2)' : 'none',
+                      fontWeight: isSelected ? 600 : 400,
+                    }}
+                  >
+                    {opt.split(' - ')[0]}
+                  </button>
+                );
+              })}
             </div>
             <p 
               className="mt-2 text-xs" 
               style={{ color: 'rgba(255, 255, 255, 0.5)' }}
               aria-live="polite"
             >
-              {options[scores[key]]}
+              {scoreToOptionLabel(options, scores[key])}
             </p>
           </div>
         ))}

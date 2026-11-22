@@ -12,15 +12,37 @@ import {
 interface PhraseCardProps {
   phrase: DotPhrase;
   dialect?: EhrDialect;
+  slotValues?: Record<string, string>;
+  onSlotValuesChange?: (nextValues: Record<string, string>) => void;
 }
 
-export default function PhraseCard({ phrase, dialect = 'raw' }: PhraseCardProps) {
+const EMPTY_SLOT_VALUES: Record<string, string> = {};
+
+export default function PhraseCard({
+  phrase,
+  dialect = 'raw',
+  slotValues: controlledSlotValues,
+  onSlotValuesChange,
+}: PhraseCardProps) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [expanded, setExpanded] = useState(false);
   const [smartFillOpen, setSmartFillOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
-  // Transient in-memory slot state only — intentionally never persisted to storage
-  const [slotValues, setSlotValues] = useState<Record<string, string>>({});
+  // Transient in-memory fallback when uncontrolled — intentionally never persisted to storage
+  const [localSlotValues, setLocalSlotValues] = useState<Record<string, string>>({});
+
+  const slotValues = controlledSlotValues ?? localSlotValues;
+
+  const applySlotValues = (
+    updater: (prev: Record<string, string>) => Record<string, string>
+  ) => {
+    const next = updater(slotValues);
+    if (onSlotValuesChange) {
+      onSlotValuesChange(next);
+    } else {
+      setLocalSlotValues(next);
+    }
+  };
 
   const slots = useMemo(() => extractTemplateSlots(phrase.content), [phrase.content]);
   const compiled = useMemo(
@@ -41,14 +63,14 @@ export default function PhraseCard({ phrase, dialect = 'raw' }: PhraseCardProps)
   };
 
   const updateSlot = (slotId: string, nextValue: string) => {
-    setSlotValues((prev) => ({
+    applySlotValues((prev) => ({
       ...prev,
       [slotId]: prev[slotId] === nextValue ? '' : nextValue,
     }));
   };
 
   const setFreeTextSlot = (slotId: string, nextValue: string) => {
-    setSlotValues((prev) => ({
+    applySlotValues((prev) => ({
       ...prev,
       [slotId]: nextValue,
     }));
@@ -176,6 +198,21 @@ export default function PhraseCard({ phrase, dialect = 'raw' }: PhraseCardProps)
           ))}
         </div>
 
+        {phrase.source && phrase.source.trim().length > 0 && (
+          <p
+            className="text-xs mb-3 leading-relaxed"
+            style={{ color: 'rgba(255, 255, 255, 0.55)' }}
+          >
+            <span
+              className="font-semibold uppercase tracking-wider text-[10px] mr-1.5"
+              style={{ color: '#7C9FFF' }}
+            >
+              Source:
+            </span>
+            {phrase.source}
+          </p>
+        )}
+
         <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }} className="pt-3">
           <div className="flex items-center justify-between gap-2">
             <button
@@ -233,7 +270,7 @@ export default function PhraseCard({ phrase, dialect = 'raw' }: PhraseCardProps)
                 {hasAnyFilled && (
                   <button
                     type="button"
-                    onClick={() => setSlotValues({})}
+                    onClick={() => applySlotValues(() => EMPTY_SLOT_VALUES)}
                     className="text-xs font-medium px-2 py-0.5 rounded"
                     style={{
                       color: '#F8FAFC',
@@ -258,28 +295,43 @@ export default function PhraseCard({ phrase, dialect = 'raw' }: PhraseCardProps)
                         {slot.label}
                       </label>
                       {slot.choices ? (
-                        <div className="flex flex-wrap gap-1">
-                          {slot.choices.map((choice) => {
-                            const selected = currentVal === choice;
-                            return (
-                              <button
-                                key={choice}
-                                type="button"
-                                aria-pressed={selected}
-                                onClick={() => updateSlot(slot.id, choice)}
-                                className="px-2.5 py-1 rounded text-xs transition-all"
-                                style={{
-                                  background: selected ? '#4F6EF7' : 'rgba(255, 255, 255, 0.05)',
-                                  color: selected ? 'white' : 'rgba(255, 255, 255, 0.65)',
-                                  border: selected
-                                    ? '1px solid #4F6EF7'
-                                    : '1px solid rgba(255, 255, 255, 0.1)',
-                                }}
-                              >
-                                {choice}
-                              </button>
-                            );
-                          })}
+                        <div className="space-y-1.5">
+                          <div className="flex flex-wrap gap-1">
+                            {slot.choices.map((choice) => {
+                              const selected = currentVal === choice;
+                              return (
+                                <button
+                                  key={choice}
+                                  type="button"
+                                  aria-pressed={selected}
+                                  onClick={() => updateSlot(slot.id, choice)}
+                                  className="px-2.5 py-1 rounded text-xs transition-all"
+                                  style={{
+                                    background: selected ? '#4F6EF7' : 'rgba(255, 255, 255, 0.05)',
+                                    color: selected ? 'white' : 'rgba(255, 255, 255, 0.65)',
+                                    border: selected
+                                      ? '1px solid #4F6EF7'
+                                      : '1px solid rgba(255, 255, 255, 0.1)',
+                                  }}
+                                >
+                                  {choice}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <input
+                            id={`input-${phrase.id}-${slot.id}`}
+                            type="text"
+                            value={currentVal}
+                            onChange={(e) => setFreeTextSlot(slot.id, e.target.value)}
+                            placeholder={compiled.wildcard ? `Or enter custom (${compiled.wildcard})` : 'Or enter custom value'}
+                            className="w-full px-2.5 py-1 rounded text-xs outline-none"
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.03)',
+                              border: '1px solid rgba(255, 255, 255, 0.08)',
+                              color: '#F8FAFC',
+                            }}
+                          />
                         </div>
                       ) : (
                         <input

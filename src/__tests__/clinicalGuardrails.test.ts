@@ -63,34 +63,51 @@ describe("Dot phrase schema and structural guardrails", () => {
 // Block A: NIHSS calculator and .nihssdoc scale guardrails (Defects #1, #2, #7)
 // ============================================================================
 describe("NIHSS scale and UN (Untestable) guardrails", () => {
-  test.failing("selecting UN on limb motor items scores 0 and formats as UN", () => {
+  test("selecting UN on limb, ataxia, and dysarthria items scores 0 and formats as UN", () => {
     const unIdx = descriptions.motorArm.findIndex((o) => o.startsWith("UN"));
+    const ataxiaUnIdx = descriptions.ataxia.findIndex((o) => o.startsWith("UN"));
+    const dysUnIdx = descriptions.dysarthria.findIndex((o) => o.startsWith("UN"));
     expect(unIdx).toBeGreaterThan(0);
+    expect(ataxiaUnIdx).toBeGreaterThan(0);
+    expect(dysUnIdx).toBeGreaterThan(0);
 
-    const singleUnState: ScoreState = {
+    const unState: ScoreState = {
       ...initialState,
       motorArmRight: optionIndexToScore(descriptions.motorArm, unIdx),
+      motorArmLeft: optionIndexToScore(descriptions.motorArm, unIdx),
+      motorLegRight: optionIndexToScore(descriptions.motorLeg, unIdx),
+      motorLegLeft: optionIndexToScore(descriptions.motorLeg, unIdx),
+      ataxia: optionIndexToScore(descriptions.ataxia, ataxiaUnIdx),
+      dysarthria: optionIndexToScore(descriptions.dysarthria, dysUnIdx),
     };
 
-    expect(computeTotalScore(singleUnState)).toBe(0);
-    const doc = formatNIHSSDocumentation(singleUnState);
+    expect(computeTotalScore(unState)).toBe(0);
+    const doc = formatNIHSSDocumentation(unState);
     expect(doc).toContain("5a. Motor Arm Right: UN");
+    expect(doc).toContain("5b. Motor Arm Left: UN");
+    expect(doc).toContain("6a. Motor Leg Right: UN");
+    expect(doc).toContain("6b. Motor Leg Left: UN");
+    expect(doc).toContain("7. Limb Ataxia: UN");
+    expect(doc).toContain("10. Dysarthria: UN");
     expect(doc).toContain("TOTAL NIHSS: 0");
   });
 
-  test.failing("NIHSS total score never exceeds 42 across any combination of options", () => {
+  test("NIHSS total score never exceeds 42 across any combination of options", () => {
     const maxNumericState: ScoreState = { ...initialState };
     const lastOptionState: ScoreState = { ...initialState };
+    const assignScore = (state: ScoreState, key: keyof ScoreState, val: number | "UN") => {
+      state[key] = val as never;
+    };
 
     for (const field of nihssFields) {
       const lastIdx = field.options.length - 1;
-      lastOptionState[field.key] = optionIndexToScore(field.options, lastIdx);
+      assignScore(lastOptionState, field.key, optionIndexToScore(field.options, lastIdx));
 
       let maxNumericIdx = 0;
       field.options.forEach((opt, idx) => {
         if (!opt.startsWith("UN")) maxNumericIdx = idx;
       });
-      maxNumericState[field.key] = optionIndexToScore(field.options, maxNumericIdx);
+      assignScore(maxNumericState, field.key, optionIndexToScore(field.options, maxNumericIdx));
     }
 
     expect(computeTotalScore(maxNumericState)).toBe(42);
@@ -103,13 +120,14 @@ describe("NIHSS scale and UN (Untestable) guardrails", () => {
     expect(nihssDocPhrase?.content).not.toContain("3 - Total gaze paresis");
   });
 
-  test.failing("Item 7 (Limb Ataxia) and Item 10 (Dysarthria) include UN options in calculator and template", () => {
+  test("Item 7 (Limb Ataxia) and Item 10 (Dysarthria) include UN options in calculator and template", () => {
     expect(descriptions.ataxia.some((o) => o.startsWith("UN"))).toBe(true);
     expect(descriptions.dysarthria.some((o) => o.startsWith("UN"))).toBe(true);
 
     const nihssDocPhrase = dotPhrases.find((p) => p.id === "nihss-documentation");
     expect(nihssDocPhrase?.content).toMatch(/7\. Limb Ataxia:[\s\S]*?UN\s*-/);
     expect(nihssDocPhrase?.content).toMatch(/10\. Dysarthria:[\s\S]*?UN\s*-/);
+    expect(nihssDocPhrase?.source).toContain("NINDS");
   });
 });
 
@@ -128,7 +146,7 @@ describe("Required emergency templates presence", () => {
 // Block B: Acute dosing caps & ABCD2 range guardrails (Defects #3, #4)
 // ============================================================================
 describe("Acute thrombolytic dosing cap and ABCD2 range guardrails", () => {
-  test.failing("weight-based mg/kg dosing lines specify an explicit max cap and tPA checks DOAC use", () => {
+  test("weight-based mg/kg dosing lines specify an explicit max cap and tPA checks DOAC use", () => {
     for (const phrase of dotPhrases) {
       if (/\bmg\/kg\b/i.test(phrase.content)) {
         expect(phrase.content).toMatch(/\bmax(imum)?\b[\s:]*\d+\s*mg/i);
@@ -136,14 +154,24 @@ describe("Acute thrombolytic dosing cap and ABCD2 range guardrails", () => {
     }
 
     const tpa = dotPhrases.find((p) => p.id === "tpa-eligibility")!;
-    expect(tpa.content).toMatch(/90\s*mg/i);
-    expect(tpa.content).toMatch(/direct thrombin|factor Xa|DOAC|apixaban|rivaroxaban|dabigatran/i);
+    expect(tpa.content).toMatch(/maximum 90 mg/i);
+    expect(tpa.content).toMatch(/maximum 9 mg/i);
+    expect(tpa.content).toMatch(/maximum 81 mg/i);
+    expect(tpa.content).toMatch(/direct thrombin|factor Xa|DOAC/i);
+    expect(tpa.content).toMatch(/normal renal function/i);
+    expect(tpa.content).toMatch(/calibrated anti-Xa/i);
+    expect(tpa.content).toMatch(/thrombin time.*ecarin clotting time/i);
+    expect(tpa.content).not.toContain("unless coagulation assays are normal");
+    expect(tpa.source).toContain("AHA/ASA 2019");
   });
 
-  test.failing("ABCD2 score items in tia-hpi cover the full 0 to 7 range", () => {
+  test("ABCD2 score items in tia-hpi cover the full 0 to 7 range", () => {
     const tiaHpi = dotPhrases.find((p) => p.id === "tia-hpi")!;
     const abcdBlock = tiaHpi.content.split("ABCD² SCORE")[1] ?? "";
     expect(abcdBlock).toContain("TOTAL: ___/7");
+    expect(abcdBlock).toContain("[1] (speech disturbance without weakness)");
+    expect(abcdBlock).toContain("[2] (unilateral weakness)");
+    expect(tiaHpi.source).toContain("Lancet 2007");
 
     const itemLines = abcdBlock
       .split("\n")
@@ -183,19 +211,28 @@ describe("Trigger uniqueness invariant", () => {
 // Block C: Placeholder bias and guideline contradiction guardrails (Defect #8)
 // ============================================================================
 describe("Placeholder neutrality and guideline contradiction guardrails", () => {
-  test.failing("templates avoid hardcoded single-choice [YES] traps and contradicted ESUS/GBS/VLCAD items", () => {
+  test("templates avoid hardcoded single-choice [YES] traps and contradicted ESUS/GBS/VLCAD items", () => {
     for (const phrase of dotPhrases) {
       const singleSideYesNo = phrase.content.match(/^-\s+[^:\n]+:\s*\[(YES|NO)\]\s*$/gim);
       expect(singleSideYesNo).toBeFalsy();
     }
 
+    const strokeHpi = dotPhrases.find((p) => p.id === "stroke-hpi")!;
+    expect(strokeHpi.content).toContain("- Hypertension: [YES/NO]");
+    expect(strokeHpi.content).toContain("- Diabetes: [YES/NO]");
+    expect(strokeHpi.content).toContain("- Hyperlipidemia: [YES/NO]");
+
     const tiaWorkup = dotPhrases.find((p) => p.id === "tia-workup")!;
     expect(tiaWorkup.content).not.toMatch(/anticoagulation if cryptogenic with ESUS/i);
+    expect(tiaWorkup.source).toContain("AHA/ASA 2021");
 
     const gbsWorkup = dotPhrases.find((p) => p.id === "gbs-workup")!;
     expect(gbsWorkup.content).not.toMatch(/□\s*Both\s*\(if severe\)/i);
+    expect(gbsWorkup.source).toContain("EAN/PNS");
 
     const ataxiaWorkup = dotPhrases.find((p) => p.id === "ataxia-workup")!;
     expect(ataxiaWorkup.content).not.toMatch(/Very long chain fatty acids.*VLCAD/i);
+    expect(ataxiaWorkup.content).toMatch(/Very long chain fatty acids.*adrenoleukodystrophy/i);
+    expect(ataxiaWorkup.source).toContain("Engelen M et al., Neurology 2022");
   });
 });
