@@ -102,6 +102,21 @@ export default function PhraseCard({ phrase }: PhraseCardProps) {
           ))}
         </div>
 
+        {phrase.source && phrase.source.trim().length > 0 && (
+          <p
+            className="text-xs mb-3 leading-relaxed"
+            style={{ color: 'rgba(255, 255, 255, 0.55)' }}
+          >
+            <span
+              className="font-semibold uppercase tracking-wider text-[10px] mr-1.5"
+              style={{ color: '#7C9FFF' }}
+            >
+              Source:
+            </span>
+            {phrase.source}
+          </p>
+        )}
+
         <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }} className="pt-3">
           <button
             onClick={() => setExpanded(!expanded)}
