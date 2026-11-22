@@ -128,7 +128,7 @@ describe("Required emergency templates presence", () => {
 // Block B: Acute dosing caps & ABCD2 range guardrails (Defects #3, #4)
 // ============================================================================
 describe("Acute thrombolytic dosing cap and ABCD2 range guardrails", () => {
-  test.failing("weight-based mg/kg dosing lines specify an explicit max cap and tPA checks DOAC use", () => {
+  test("weight-based mg/kg dosing lines specify an explicit max cap and tPA checks DOAC use", () => {
     for (const phrase of dotPhrases) {
       if (/\bmg\/kg\b/i.test(phrase.content)) {
         expect(phrase.content).toMatch(/\bmax(imum)?\b[\s:]*\d+\s*mg/i);
@@ -136,14 +136,20 @@ describe("Acute thrombolytic dosing cap and ABCD2 range guardrails", () => {
     }
 
     const tpa = dotPhrases.find((p) => p.id === "tpa-eligibility")!;
-    expect(tpa.content).toMatch(/90\s*mg/i);
-    expect(tpa.content).toMatch(/direct thrombin|factor Xa|DOAC|apixaban|rivaroxaban|dabigatran/i);
+    expect(tpa.content).toMatch(/maximum 90 mg/i);
+    expect(tpa.content).toMatch(/maximum 9 mg/i);
+    expect(tpa.content).toMatch(/maximum 81 mg/i);
+    expect(tpa.content).toMatch(/direct thrombin|factor Xa|DOAC/i);
+    expect(tpa.source).toContain("AHA/ASA 2019");
   });
 
-  test.failing("ABCD2 score items in tia-hpi cover the full 0 to 7 range", () => {
+  test("ABCD2 score items in tia-hpi cover the full 0 to 7 range", () => {
     const tiaHpi = dotPhrases.find((p) => p.id === "tia-hpi")!;
     const abcdBlock = tiaHpi.content.split("ABCD² SCORE")[1] ?? "";
     expect(abcdBlock).toContain("TOTAL: ___/7");
+    expect(abcdBlock).toContain("[1] (speech disturbance without weakness)");
+    expect(abcdBlock).toContain("[2] (unilateral weakness)");
+    expect(tiaHpi.source).toContain("Lancet 2007");
 
     const itemLines = abcdBlock
       .split("\n")
