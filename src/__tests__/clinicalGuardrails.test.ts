@@ -211,19 +211,28 @@ describe("Trigger uniqueness invariant", () => {
 // Block C: Placeholder bias and guideline contradiction guardrails (Defect #8)
 // ============================================================================
 describe("Placeholder neutrality and guideline contradiction guardrails", () => {
-  test.failing("templates avoid hardcoded single-choice [YES] traps and contradicted ESUS/GBS/VLCAD items", () => {
+  test("templates avoid hardcoded single-choice [YES] traps and contradicted ESUS/GBS/VLCAD items", () => {
     for (const phrase of dotPhrases) {
       const singleSideYesNo = phrase.content.match(/^-\s+[^:\n]+:\s*\[(YES|NO)\]\s*$/gim);
       expect(singleSideYesNo).toBeFalsy();
     }
 
+    const strokeHpi = dotPhrases.find((p) => p.id === "stroke-hpi")!;
+    expect(strokeHpi.content).toContain("- Hypertension: [YES/NO]");
+    expect(strokeHpi.content).toContain("- Diabetes: [YES/NO]");
+    expect(strokeHpi.content).toContain("- Hyperlipidemia: [YES/NO]");
+
     const tiaWorkup = dotPhrases.find((p) => p.id === "tia-workup")!;
     expect(tiaWorkup.content).not.toMatch(/anticoagulation if cryptogenic with ESUS/i);
+    expect(tiaWorkup.source).toContain("AHA/ASA 2021");
 
     const gbsWorkup = dotPhrases.find((p) => p.id === "gbs-workup")!;
     expect(gbsWorkup.content).not.toMatch(/□\s*Both\s*\(if severe\)/i);
+    expect(gbsWorkup.source).toContain("EAN/PNS");
 
     const ataxiaWorkup = dotPhrases.find((p) => p.id === "ataxia-workup")!;
     expect(ataxiaWorkup.content).not.toMatch(/Very long chain fatty acids.*VLCAD/i);
+    expect(ataxiaWorkup.content).toMatch(/Very long chain fatty acids.*adrenoleukodystrophy/i);
+    expect(ataxiaWorkup.source).toContain("Engelen M et al., Neurology 2022");
   });
 });

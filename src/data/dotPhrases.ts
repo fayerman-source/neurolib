@@ -50,12 +50,13 @@ Pertinent negatives: No chest pain, no palpitations, no shortness of breath, no 
 PMH/PSH:
 - Prior stroke/TIA: [YES/NO - DATE]
 - Atrial fibrillation: [YES/NO - if yes, on anticoagulation: YES/NO]
-- Hypertension: [YES]
-- Diabetes: [YES]
-- Hyperlipidemia: [YES]
+- Hypertension: [YES/NO]
+- Diabetes: [YES/NO]
+- Hyperlipidemia: [YES/NO]
 - Smoking: [CURRENT/FORMER/NEVER]
 - Coronary artery disease: [YES/NO]`,
     tags: ['stroke', 'HPI', 'admission', 'consult'],
+    source: 'AHA/ASA 2019 Acute Ischemic Stroke Guidelines (Powers WJ et al., Stroke 2019;50(12):e344-e418)',
   },
   {
     id: 'nihss-documentation',
@@ -367,9 +368,9 @@ Small Vessel Disease:
 □ Statin
 
 Cryptogenic:
-□ Antiplatelet therapy
-□ Consider anticoagulation if cryptogenic with ESUS criteria met`,
+□ Antiplatelet therapy`,
     tags: ['TIA', 'workup', 'diagnosis', 'etiology'],
+    source: 'AHA/ASA 2021 Secondary Stroke Prevention Guidelines (Kleindorfer DO et al., Stroke 2021;52(7):e364-e467)',
   },
   {
     id: 'migraine-hpi',
@@ -995,7 +996,7 @@ GENETIC:
 □ Ataxia panel: [Spinocerebellar ataxia (SCA) 1,2,3,6,7 / Friedreich ataxia / Fragile X]
 □ Mitochondrial testing
 □ Vitamin E level
-□ Very long chain fatty acids (if VLCAD suspected)
+□ Very long chain fatty acids (if adrenoleukodystrophy / AMN suspected)
 
 AUTOIMMUNE:
 □ Anti-GAD
@@ -1022,6 +1023,7 @@ SPECIFIC TREATMENTS:
 - Paraneoplastic: Treat underlying tumor + immunotherapy
 - Hereditary: Supportive, genetic counseling`,
     tags: ['ataxia', 'workup', 'diagnosis', 'cerebellar'],
+    source: 'International Recommendations for the Diagnosis and Management of Patients With Adrenoleukodystrophy (Engelen M et al., Neurology 2022;99(21):940-951)',
   },
   {
     id: 'gbs-workup',
@@ -1089,7 +1091,6 @@ Other:
 TREATMENT DECISION:
 □ IVIG: [0.4 g/kg/day x 5 days]
 □ PLEX: [5 exchanges over 10-14 days]
-□ Both (if severe)
 □ No treatment (mild, stable)
 
 MONITORING:
@@ -1102,5 +1103,6 @@ MONITORING:
 PROGNOSIS:
 □ Poor prognosis indicators: [Rapid progression/Respiratory failure/Axonal variant/Elderly/High CSF protein]`,
     tags: ['GBS', 'Guillain-Barré', 'workup', 'neuropathy', 'weakness'],
+    source: 'AAN Practice Parameter: Immunotherapy for Guillain-Barre syndrome (Hughes RAC et al., Neurology 2003;61(6):736-740); EAN/PNS Guideline on diagnosis and treatment of Guillain-Barre syndrome (van Doorn PA et al., Eur J Neurol 2023;30(12):3646-3674)',
   },
 ];
