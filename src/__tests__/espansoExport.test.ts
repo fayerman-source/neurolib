@@ -7,8 +7,8 @@ import { compileTemplate } from "@/lib/templateCompiler";
 import {
   generateEspansoYaml,
   parseEspansoYaml,
-  writeExpanderPacksToDir,
 } from "@/lib/espansoExporter";
+import { writeExpanderPacksToDir } from "@/lib/espansoPackWriter";
 
 describe("Espanso YAML text-expander pack build-time exporter and round-trip parser", () => {
   test("every phrase in dotPhrases round-trips byte-for-byte in raw, epic, and cerner dialects", () => {

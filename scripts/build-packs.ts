@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { dotPhrases } from '../src/data/dotPhrases';
-import { writeExpanderPacksToDir } from '../src/lib/espansoExporter';
+import { writeExpanderPacksToDir } from '../src/lib/espansoPackWriter';
 
 const outDir = join(process.cwd(), 'out');
 if (!existsSync(outDir)) {
