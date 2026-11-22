@@ -258,28 +258,43 @@ export default function PhraseCard({ phrase, dialect = 'raw' }: PhraseCardProps)
                         {slot.label}
                       </label>
                       {slot.choices ? (
-                        <div className="flex flex-wrap gap-1">
-                          {slot.choices.map((choice) => {
-                            const selected = currentVal === choice;
-                            return (
-                              <button
-                                key={choice}
-                                type="button"
-                                aria-pressed={selected}
-                                onClick={() => updateSlot(slot.id, choice)}
-                                className="px-2.5 py-1 rounded text-xs transition-all"
-                                style={{
-                                  background: selected ? '#4F6EF7' : 'rgba(255, 255, 255, 0.05)',
-                                  color: selected ? 'white' : 'rgba(255, 255, 255, 0.65)',
-                                  border: selected
-                                    ? '1px solid #4F6EF7'
-                                    : '1px solid rgba(255, 255, 255, 0.1)',
-                                }}
-                              >
-                                {choice}
-                              </button>
-                            );
-                          })}
+                        <div className="space-y-1.5">
+                          <div className="flex flex-wrap gap-1">
+                            {slot.choices.map((choice) => {
+                              const selected = currentVal === choice;
+                              return (
+                                <button
+                                  key={choice}
+                                  type="button"
+                                  aria-pressed={selected}
+                                  onClick={() => updateSlot(slot.id, choice)}
+                                  className="px-2.5 py-1 rounded text-xs transition-all"
+                                  style={{
+                                    background: selected ? '#4F6EF7' : 'rgba(255, 255, 255, 0.05)',
+                                    color: selected ? 'white' : 'rgba(255, 255, 255, 0.65)',
+                                    border: selected
+                                      ? '1px solid #4F6EF7'
+                                      : '1px solid rgba(255, 255, 255, 0.1)',
+                                  }}
+                                >
+                                  {choice}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <input
+                            id={`input-${phrase.id}-${slot.id}`}
+                            type="text"
+                            value={currentVal}
+                            onChange={(e) => setFreeTextSlot(slot.id, e.target.value)}
+                            placeholder={compiled.wildcard ? `Or enter custom (${compiled.wildcard})` : 'Or enter custom value'}
+                            className="w-full px-2.5 py-1 rounded text-xs outline-none"
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.03)',
+                              border: '1px solid rgba(255, 255, 255, 0.08)',
+                              color: '#F8FAFC',
+                            }}
+                          />
                         </div>
                       ) : (
                         <input

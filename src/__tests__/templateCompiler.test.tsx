@@ -94,4 +94,41 @@ describe("Smart-Fill slot extraction and EHR wildcard dialect compiler", () => {
     expect(html).toContain("Smart Fill (0/");
     expect(html).toContain("*** blanks");
   });
+
+  test("extracts numeric [X] placeholders while preserving [ ] and line-leading [x] checkboxes", () => {
+    const sample = [
+      "[ ] Unchecked symptom",
+      "[x] Checked symptom",
+      "Hospital stay: [X] days",
+      "Vital signs: BP [X]/[X], HR [X]",
+    ].join("\n");
+
+    const slots = extractTemplateSlots(sample);
+    expect(slots).toHaveLength(4);
+    expect(slots.every((s) => s.placeholder === "X")).toBe(true);
+
+    const compiled = compileTemplate(sample, { "slot-0": "3" }, "epic");
+    expect(compiled.filledSlots).toBe(1);
+    expect(compiled.unfilledBlanks).toBe(3);
+    expect(compiled.text).toBe(
+      [
+        "[ ] Unchecked symptom",
+        "[x] Checked symptom",
+        "Hospital stay: 3 days",
+        "Vital signs: BP ***/***, HR ***",
+      ].join("\n")
+    );
+  });
+
+  test("preserves N/A in choice chips and keeps composite ___/5 or sub-prompt fields as free-text", () => {
+    const strokeDischarge = dotPhrases.find((p) => p.id === "stroke-discharge")!;
+    const slots = extractTemplateSlots(strokeDischarge.content);
+
+    const smokingSlot = slots.find((s) => s.raw === "[N/A/Counseled/Resources provided]");
+    expect(smokingSlot?.choices).toEqual(["N/A", "Counseled", "Resources provided"]);
+
+    const strengthSlot = slots.find((s) => s.raw.startsWith("[RIGHT ARM ___/5"));
+    expect(strengthSlot).toBeDefined();
+    expect(strengthSlot?.choices).toBe(null);
+  });
 });
