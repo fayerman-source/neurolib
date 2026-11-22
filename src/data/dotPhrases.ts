@@ -173,7 +173,8 @@ EXCLUSION CRITERIA:
 □ Recent intracranial/spinal surgery or head trauma (≤3 months)
 □ Active internal bleeding
 □ Platelet count < 100,000
-□ Current use of anticoagulant with INR > 1.7
+□ Current use of anticoagulant with INR > 1.7, PT > 15s, or elevated aPTT
+□ Direct thrombin inhibitor or direct factor Xa inhibitor (DOAC: dabigatran, apixaban, rivaroxaban, edoxaban) within 48 hours (assuming normal renal function; longer if renal impairment), unless appropriate drug-specific assays (calibrated anti-Xa activity for factor Xa inhibitors, or thrombin time / ecarin clotting time for dabigatran) are normal
 □ Blood glucose < 50 mg/dL
 □ Seizure at stroke onset with postictal state
 □ Stroke within past 3 months (except prior TIA)
@@ -192,13 +193,14 @@ RELATIVE CONTRAINDICATIONS (consider risk/benefit):
 
 DECISION: □ APPROVED FOR tPA  □ DECLINED - Reason: ___________
 
-Dose: [0.9 mg/kg] x [WEIGHT] kg = [TOTAL] mg
-  - 10% bolus over 1 minute: [BOLUS] mg
-  - Remaining 90% over 60 minutes: [INFUSION] mg
+Dose: [0.9 mg/kg] x [WEIGHT] kg = [TOTAL] mg (MAXIMUM 90 mg total dose)
+  - 10% bolus over 1 minute: [BOLUS] mg (maximum 9 mg)
+  - Remaining 90% over 60 minutes: [INFUSION] mg (maximum 81 mg)
 
 Consent obtained: □ Yes
 BP: ____/____ mmHg - Required < 185/110 before treatment`,
     tags: ['stroke', 'tPA', 'treatment', 'eligibility', 'alteplase'],
+    source: 'AHA/ASA 2019 Acute Ischemic Stroke Guidelines (Powers WJ et al., Stroke 2019;50(12):e344-e418); FDA Activase (alteplase) Prescribing Information',
   },
   {
     id: 'stroke-discharge',
@@ -303,13 +305,14 @@ LAST KNOWN WELL: [DATE/TIME]
 ABCD² SCORE (Risk of stroke after TIA):
 - Age ≥60: [0/1]
 - BP ≥140/90: [0/1]
-- Clinical features: [0/1] (unilateral weakness) or [0] (speech disturbance alone)
+- Clinical features: [0] (other), [1] (speech disturbance without weakness), or [2] (unilateral weakness)
 - Duration: [0] (<10 min), [1] (10-59 min), or [2] (≥60 min)
 - Diabetes: [0/1]
 TOTAL: ___/7
 
 ABCD² Risk Category: [Low (0-3) / Moderate (4-5) / High (6-7)]`,
     tags: ['TIA', 'HPI', 'ABCD2', 'stroke risk'],
+    source: 'Johnston SC et al., Validation and refinement of scores to predict very early stroke risk after transient ischaemic attack (ABCD2 score), Lancet 2007;369(9558):283-292',
   },
   {
     id: 'tia-workup',
