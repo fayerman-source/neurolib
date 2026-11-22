@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { categories, DotPhrase } from '@/data/dotPhrases';
 import {
+  buildUniqueCustomPhraseId,
   serializeCustomPack,
   StorageSaveResult,
   validateCustomPackJson,
@@ -34,14 +35,10 @@ export default function CustomPackPanel({
     const cleanTrigger = trigger.trim().startsWith('.')
       ? trigger.trim().toLowerCase()
       : `.${trigger.trim().toLowerCase()}`;
-    const generatedId =
-      cleanTrigger
-        .slice(1)
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '') || 'custom-phrase';
+    const generatedId = buildUniqueCustomPhraseId(cleanTrigger, customPhrases);
 
     const candidate: DotPhrase = {
-      id: `custom-${generatedId}`,
+      id: generatedId,
       name: name.trim(),
       trigger: cleanTrigger,
       category,
@@ -54,7 +51,12 @@ export default function CustomPackPanel({
       ...(source.trim() ? { source: source.trim() } : {}),
     };
 
-    const nextList = [...customPhrases.filter((p) => p.id !== candidate.id), candidate];
+    const nextList = [
+      ...customPhrases.filter(
+        (p) => p.trigger.toLowerCase() !== cleanTrigger
+      ),
+      candidate,
+    ];
     const check = validateCustomPackJson(JSON.stringify(nextList));
     if (!check.ok) {
       setStatusMsg({ type: 'err', text: check.error });

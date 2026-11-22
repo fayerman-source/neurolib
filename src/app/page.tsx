@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useSyncExternalStore } from 'react';
-import SearchBar from '@/components/SearchBar';
+import SearchBar, { QuickCopyFeedback } from '@/components/SearchBar';
 import CategoryNav from '@/components/CategoryNav';
 import PhraseCard from '@/components/PhraseCard';
 import NIHSSCalculator from '@/components/NIHSSCalculator';
@@ -103,7 +103,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNIHSS, setShowNIHSS] = useState(false);
   const [showCustomPack, setShowCustomPack] = useState(false);
-  const [quickCopiedTrigger, setQuickCopiedTrigger] = useState<string | null>(null);
+  const [quickCopyFeedback, setQuickCopyFeedback] = useState<QuickCopyFeedback | null>(null);
   // Keyed by getPhraseSlotKey(phrase) (id + content), so filtering preserves active drafts
   // while replacing a phrase's content via custom pack cleanly isolates/resets slot values.
   const [slotValuesByPhrase, setSlotValuesByPhrase] = useState<
@@ -186,8 +186,16 @@ export default function Home() {
     const compiled = compileTemplate(top.content, activeSlots, ehrDialect);
     const ok = await copyTextToClipboard(compiled.text);
     if (ok) {
-      setQuickCopiedTrigger(top.trigger);
-      setTimeout(() => setQuickCopiedTrigger(null), 1800);
+      setQuickCopyFeedback({ status: 'copied', trigger: top.trigger });
+      setTimeout(() => {
+        setQuickCopyFeedback((prev) => (prev?.status === 'copied' ? null : prev));
+      }, 1800);
+    } else {
+      setQuickCopyFeedback({
+        status: 'error',
+        trigger: top.trigger,
+        fallbackText: compiled.text,
+      });
     }
   };
 
@@ -280,7 +288,8 @@ export default function Home() {
               topMatchTrigger={filteredPhrases[0]?.trigger}
               resolveTopMatchTrigger={resolveTopMatchTrigger}
               onQuickCopyTopMatch={handleQuickCopyTopMatch}
-              quickCopiedTrigger={quickCopiedTrigger}
+              quickCopyFeedback={quickCopyFeedback}
+              onDismissQuickCopyFeedback={() => setQuickCopyFeedback(null)}
             />
             <CategoryNav activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
             <EhrDialectSelector dialect={ehrDialect} onChange={handleDialectChange} />

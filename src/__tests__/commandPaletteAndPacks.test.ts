@@ -1,6 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { dotPhrases, DotPhrase } from "@/data/dotPhrases";
 import {
+  buildUniqueCustomPhraseId,
   createPinnedStore,
   MAX_PACK_BYTES,
   mergeAndRankPhrases,
@@ -199,5 +200,34 @@ describe("Command-palette ranking, pinned favorites, and local JSON packs", () =
     }));
     pinStore.togglePin("gbs-workup");
     expect(pinStore.getPinnedIds()).toEqual(["gbs-workup"]);
+
+    // When storage reads succeed (with an existing saved pin) but writes fail (quota exceeded),
+    // subsequent getPinnedIds() calls must preserve the in-memory toggle instead of reverting it.
+    const readOnlyStore = createPinnedStore("neurolib:pinned-ids", () => ({
+      getItem: () => '["stroke-hpi"]',
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+    }));
+    expect(readOnlyStore.getPinnedIds()).toEqual(["stroke-hpi"]);
+    readOnlyStore.togglePin("gbs-workup");
+    expect(readOnlyStore.getPinnedIds()).toEqual(["stroke-hpi", "gbs-workup"]);
+  });
+
+  test("buildUniqueCustomPhraseId prevents distinct hyphenated triggers from colliding onto the same id", () => {
+    const first: DotPhrase = {
+      id: "custom-a-b",
+      name: "First",
+      trigger: ".a-b",
+      category: "stroke",
+      description: "Desc",
+      content: "Body",
+      tags: ["custom"],
+    };
+
+    // Distinct trigger '.a--b' normalizes to the same slug 'a-b' but receives a unique id
+    expect(buildUniqueCustomPhraseId(".a--b", [first])).toBe("custom-a-b-2");
+    // Updating the exact same trigger '.a-b' reuses its existing id cleanly
+    expect(buildUniqueCustomPhraseId(".a-b", [first])).toBe("custom-a-b");
   });
 });

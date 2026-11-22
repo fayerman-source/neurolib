@@ -60,7 +60,7 @@ export function createPinnedStore(
   getStorage: () => Pick<Storage, 'getItem' | 'setItem'> | undefined
 ): PinnedStore {
   let memoryPinned: readonly string[] = [];
-  let cachedRaw: string | null | undefined = undefined;
+  let lastObservedRaw: string | null | undefined = undefined;
 
   return {
     getPinnedIds() {
@@ -68,11 +68,9 @@ export function createPinnedStore(
       if (storage) {
         try {
           const raw = storage.getItem(storageKey);
-          if (raw !== cachedRaw) {
-            cachedRaw = raw;
-            if (raw !== null) {
-              memoryPinned = parsePinnedIds(raw);
-            }
+          if (raw !== lastObservedRaw) {
+            lastObservedRaw = raw;
+            memoryPinned = parsePinnedIds(raw);
           }
         } catch {
           // Fall back to in-memory pinned IDs when storage is blocked
@@ -81,20 +79,52 @@ export function createPinnedStore(
       return memoryPinned;
     },
     togglePin(phraseId: string) {
+      // Ensure initial stored snapshot has been loaded before applying toggle
+      this.getPinnedIds();
       const next = togglePinnedId(memoryPinned, phraseId);
       memoryPinned = next;
       const serialized = JSON.stringify(next);
-      cachedRaw = serialized;
       const storage = getStorage();
       if (storage) {
         try {
           storage.setItem(storageKey, serialized);
+          lastObservedRaw = serialized;
         } catch {
-          // Best-effort persistence; in-memory state stays updated
+          // Keep lastObservedRaw unchanged so failed writes do not revert memoryPinned on next read
         }
       }
     },
   };
+}
+
+export function buildUniqueCustomPhraseId(
+  cleanTrigger: string,
+  existingPhrases: readonly DotPhrase[]
+): string {
+  const existingForTrigger = existingPhrases.find(
+    (p) => p.trigger.toLowerCase() === cleanTrigger.toLowerCase()
+  );
+  if (existingForTrigger) {
+    return existingForTrigger.id;
+  }
+
+  const baseSlug =
+    cleanTrigger
+      .replace(/^\.+/, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'phrase';
+
+  const takenIds = new Set(existingPhrases.map((p) => p.id));
+  const candidateBase = `custom-${baseSlug}`;
+  if (!takenIds.has(candidateBase)) {
+    return candidateBase;
+  }
+
+  let suffix = 2;
+  while (takenIds.has(`${candidateBase}-${suffix}`)) {
+    suffix++;
+  }
+  return `${candidateBase}-${suffix}`;
 }
 
 export function validateCustomPackJson(rawJson: string): PackValidationResult {
