@@ -123,6 +123,12 @@ describe("Command-palette ranking, pinned favorites, and local JSON packs", () =
       },
     });
     expect(quotaFailure.ok).toBe(false);
+
+    // Also handles SecurityError thrown when acquiring window.localStorage itself
+    const getterFailure = saveCustomPhrasesToStorage([sample], () => {
+      throw new Error("SecurityError: Access is denied");
+    });
+    expect(getterFailure.ok).toBe(false);
   });
 
   test("enforces 512 KB cap on canonical normalized form so accepted packs reload and re-import cleanly", () => {

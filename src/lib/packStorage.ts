@@ -227,21 +227,25 @@ export function validateCustomPackJson(rawJson: string): PackValidationResult {
 
 export function saveCustomPhrasesToStorage(
   phrases: readonly DotPhrase[],
-  storage?: Pick<Storage, 'setItem'>
+  getStorage?:
+    | Pick<Storage, 'setItem'>
+    | (() => Pick<Storage, 'setItem'> | undefined)
 ): StorageSaveResult {
   const canonicalJson = JSON.stringify(phrases);
   if (canonicalJson.length > MAX_PACK_BYTES) {
     return { ok: false, error: 'Pack exceeds 512 KB normalized size limit.' };
   }
 
-  const targetStorage =
-    storage ?? (typeof window !== 'undefined' ? window.localStorage : undefined);
-
-  if (!targetStorage) {
-    return { ok: false, error: 'Browser storage is unavailable.' };
-  }
-
   try {
+    const targetStorage =
+      typeof getStorage === 'function'
+        ? getStorage()
+        : getStorage ?? (typeof window !== 'undefined' ? window.localStorage : undefined);
+
+    if (!targetStorage) {
+      return { ok: false, error: 'Browser storage is unavailable.' };
+    }
+
     targetStorage.setItem(CUSTOM_PACK_STORAGE_KEY, canonicalJson);
     return { ok: true };
   } catch {
