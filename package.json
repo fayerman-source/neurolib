@@ -15,7 +15,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && bun scripts/build-packs.ts",
+    "build:packs": "bun scripts/build-packs.ts",
     "lint": "eslint .",
     "test": "bun test"
   },
