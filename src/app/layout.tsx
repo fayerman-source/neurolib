@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { getPublicAssetPath } from "@/lib/assetPath";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -22,7 +23,7 @@ export default function RootLayout({
           className="fixed left-0 right-0 z-[-1] opacity-25 grayscale-[0.2] pointer-events-none h-[80vh]"
           style={{
             top: 0,
-            backgroundImage: 'url("/hero-bg.png")',
+            backgroundImage: `url("${getPublicAssetPath('/hero-bg.png')}")`,
             backgroundSize: 'cover',
             backgroundPosition: 'top center',
             maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',

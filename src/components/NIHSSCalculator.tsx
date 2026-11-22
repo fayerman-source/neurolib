@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { copyTextToClipboard } from '@/lib/clipboard';
 
 export type NIHSSScoreValue = number | 'UN';
 
@@ -190,7 +191,7 @@ export function formatNIHSSDocumentation(scores: ScoreState): string {
 
 export default function NIHSSCalculator() {
   const [scores, setScores] = useState<ScoreState>(initialState);
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
 
   const updateScore = (field: keyof ScoreState, value: ScoreState[keyof ScoreState]) => {
     setScores((prev) => ({ ...prev, [field]: value }));
@@ -201,12 +202,13 @@ export default function NIHSSCalculator() {
   const generateDocumentation = () => formatNIHSSDocumentation(scores);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(generateDocumentation());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+    const ok = await copyTextToClipboard(generateDocumentation());
+    if (ok) {
+      setCopyStatus('copied');
+      setTimeout(() => setCopyStatus('idle'), 2000);
+    } else {
+      setCopyStatus('error');
+      setTimeout(() => setCopyStatus('idle'), 3500);
     }
   };
 
@@ -342,22 +344,32 @@ export default function NIHSSCalculator() {
           className="w-full flex items-center justify-center gap-2 py-3 font-medium transition-all"
           style={{
             borderRadius: '10px',
-            background: copied 
-              ? 'rgba(34, 197, 94, 0.15)' 
-              : 'linear-gradient(135deg, #4F6EF7, #7B5EA7)',
-            color: copied ? '#22C55E' : 'white',
+            background:
+              copyStatus === 'copied'
+                ? 'rgba(34, 197, 94, 0.15)'
+                : copyStatus === 'error'
+                  ? 'rgba(239, 68, 68, 0.15)'
+                  : 'linear-gradient(135deg, #4F6EF7, #7B5EA7)',
+            color: copyStatus === 'copied' ? '#22C55E' : copyStatus === 'error' ? '#EF4444' : 'white',
             border: 'none',
             fontSize: '15px',
             fontWeight: 600,
-            boxShadow: copied ? 'none' : '0 4px 12px rgba(79, 110, 247, 0.4)',
+            boxShadow: copyStatus === 'idle' ? '0 4px 12px rgba(79, 110, 247, 0.4)' : 'none',
           }}
         >
-          {copied ? (
+          {copyStatus === 'copied' ? (
             <>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               Documentation Copied!
+            </>
+          ) : copyStatus === 'error' ? (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Copy Failed — Clipboard Unavailable
             </>
           ) : (
             <>
